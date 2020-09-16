@@ -19,20 +19,19 @@ pub const ConsoleIO = struct {
 
     const Self = @This();
 
-    pub fn write(self: Self, bytes: []const u8) !void {
-        _ = try stdout.write(bytes);
+    pub fn write(self: Self, bytes: []const u8) void {
+        _ = stdout.write(bytes) catch unreachable;
     }
-    pub fn writeLine(self: ConsoleIO, bytes: []const u8) !void {
-        _ = try stdout.write(bytes);
-        _ = try stdout.write("\n");
+    pub fn writeLine(self: ConsoleIO, bytes: []const u8) void {
+        _ = stdout.write(bytes) catch unreachable;
+        _ = stdout.write("\n") catch unreachable;
     }
 
-    pub fn print(self: Self, comptime format: []const u8, args: anytype) !void {
-        try stdout.print(format, args);
+    pub fn print(self: Self, comptime format: []const u8, args: anytype) void {
+        stdout.print(format, args) catch unreachable;
     }
-    pub fn printLine(self: Self, comptime format: []const u8, args: anytype) !void {
-        try stdout.print(format, args);
-        _ = try stdout.write("\n");
+    pub fn printLine(self: Self, comptime format: []const u8, args: anytype) void {
+        stdout.print(format ++ "\n", args) catch unreachable;
     }
 
     pub fn readLine(self: Self, allocator: *mem.Allocator) ![]u8 {

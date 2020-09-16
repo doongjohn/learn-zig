@@ -1,3 +1,6 @@
+// zig version
+// 0.6.0+9fe4c8923
+
 const std = @import("std");
 const fmt = std.fmt;
 const mem = std.mem;
@@ -32,10 +35,10 @@ pub fn main() !void {
                 break :blk "hello";
             }
         };
-        try console.writeLine(someText);
+        console.writeLine(someText);
 
         // this is also possible.
-        try console.writeLine(blk: {
+        console.writeLine(blk: {
             if (false) {
                 break :blk "wow";
             } else {
@@ -47,7 +50,7 @@ pub fn main() !void {
     try printTitle(arenaAlloc, "Pointer");
     {
         var num: i32 = 10;
-        try console.printLine("num: {}", .{num});
+        console.printLine("num: {}", .{num});
 
         var numPtr: *i32 = undefined;
         //          ^^^^ --> pointer type.
@@ -56,7 +59,7 @@ pub fn main() !void {
         numPtr.* = 1;
         //    ^^ --> dereference pointer.
 
-        try console.printLine("num: {}", .{num});
+        console.printLine("num: {}", .{num});
     }
     {
         var num: i32 = 10;
@@ -71,7 +74,7 @@ pub fn main() !void {
         //                 ^^^^^^^ --> deallocates a single item.
 
         heapInt.* = 100;
-        try console.printLine("num: {}", .{heapInt.*});
+        console.printLine("num: {}", .{heapInt.*});
     }
     {
         var ptr: ?*i32 = null;
@@ -81,29 +84,31 @@ pub fn main() !void {
         //                            ^^ --> unwraps optional. (runtime error if null.)
 
         ptr.?.* = 100;
-        try console.printLine("optional pointer value: {}", .{ptr.?.*});
+        console.printLine("optional pointer value: {}", .{ptr.?.*});
 
         if (ptr) |value| { // this also unwraps optional
             value.* = 10;
-            try console.printLine("optional pointer value: {}", .{value.*});
+            console.printLine("optional pointer value: {}", .{value.*});
         } else {
-            try console.writeLine("optional pointer value: null");
+            console.writeLine("optional pointer value: null");
         }
     }
 
     try printTitle(arenaAlloc, "Array");
     {
-        var array = [_]i32{ 1, 2, 3 };
-        for (array) |item| {
-            try console.printLine("{}", .{item});
+        var array = [3]i32{ 1, 2, 3 };
+        //          ^^^ --> length of this array.
+        for (array) |item, i| {
+            console.printLine("[{}]: {}", .{ i, item });
         }
-        zeroArray(i32, &array);
-        for (array) |item| {
-            try console.printLine("{}", .{item});
+
+        mem.set(i32, &array, 0);
+        for (array) |item, i| {
+            console.printLine("[{}]: {}", .{ i, item });
         }
     }
     {
-        try console.writeLine("array:");
+        console.writeLine("array:");
         var array = [_]i32{ 1, 10, 100 }; // this array is mutable because it's declared as `var`.
         //            ^^^ --> same as [3]i32 because it has 3 items.
         for (array) |*item, i| {
@@ -111,52 +116,62 @@ pub fn main() !void {
             //       |      └> current index.
             //       └> get array[i] as a pointer. (so that we can change its value.)
             item.* = @intCast(i32, i) + 1;
-            try console.print("[{}]: {}\n", .{ i, item.* });
+            console.print("[{}]: {}\n", .{ i, item.* });
         }
 
-        try console.writeLine("array ptr:");
+        console.writeLine("array ptr:");
         const ptr = &array; // pointer to an array.
         for (ptr) |item, i| {
-            try console.printLine("[{}]: {}", .{ i, item });
+            console.printLine("[{}]: {}", .{ i, item });
         }
 
-        try console.writeLine("slice:");
+        console.writeLine("slice:");
         const slice = array[0..]; // a slice is a pointer and a length. (its length is known at runtime.)
         //                  ^^^
         //                  └> from index 0 to the end.
         for (slice) |item, i| {
-            try console.printLine("[{}]: {}", .{ i, item });
+            console.printLine("[{}]: {}", .{ i, item });
         }
     }
     {
-        try console.writeLine("heap allocated array");
-        try console.write("array length: ");
-        const arrayLengthInput = try console.readLine(generalAlloc);
-        defer generalAlloc.free(arrayLengthInput);
+        console.writeLine("heap allocated array");
 
-        const array = try generalAlloc.alloc(i32, try fmt.parseInt(usize, arrayLengthInput, 10));
+        var arrayLength: usize = 0;
+        console.write("array length: ");
+        while (true) {
+            const arrayLengthInput = try console.readLine(generalAlloc);
+            defer generalAlloc.free(arrayLengthInput);
+
+            arrayLength = fmt.parseInt(usize, arrayLengthInput, 10) catch {
+                console.write("please input usize: ");
+                continue;
+            };
+            break;
+        }
+
+        const array = try generalAlloc.alloc(i32, arrayLength);
         //                             ^^^^^ --> allocates array.
         defer generalAlloc.free(array);
         //                 ^^^^ --> deallocates array.
 
-        try console.writeLine("apply random values:");
+        console.writeLine("apply random values:");
         for (array) |*item, i| {
             item.* = rng.intRangeAtMost(i32, 1, 10); // generate random value
-            try console.printLine("[{}]: {}", .{ i, item.* });
+            console.printLine("[{}]: {}", .{ i, item.* });
         }
     }
     {
-        try console.writeLine("concat array:");
+        console.writeLine("concat array:");
         const str = try mem.concat(generalAlloc, u8, &[_][]const u8{ "wow ", "hey ", "yay" });
         defer generalAlloc.free(str);
 
-        try console.writeLine(str);
-        try console.printLine("{}", .{str.len});
+        console.writeLine(str);
+        console.printLine("{}", .{str.len});
     }
 
     try printTitle(arenaAlloc, "Console IO");
     {
-        try console.write("\nconsole input(std): ");
+        console.write("\nconsole input(std): ");
         const stdin = std.io.getStdIn().inStream();
         const input: []u8 = try stdin.readUntilDelimiterAlloc(generalAlloc, '\n', 256);
         //                            ^^^^^^^^^^^^^^^^^^^^^^^
@@ -168,19 +183,19 @@ pub fn main() !void {
         const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ trimmed, "..." });
         defer generalAlloc.free(concated);
 
-        try console.printLine("input: {}\nlen: {}", .{ trimmed, trimmed.len });
-        try console.printLine("concated: {}\nlen: {}", .{ concated, concated.len });
+        console.printLine("input: {}\nlen: {}", .{ trimmed, trimmed.len });
+        console.printLine("concated: {}\nlen: {}", .{ concated, concated.len });
     }
     {
-        try console.write("\nconsole input(win api): ");
+        console.write("\nconsole input(win api): ");
         const input: []u8 = try console.readLine(generalAlloc);
         defer generalAlloc.free(input);
 
         const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ input, "..." });
         defer generalAlloc.free(concated);
 
-        try console.printLine("input: {}\nlen: {}", .{ input, input.len });
-        try console.printLine("concated: {}\nlen: {}", .{ concated, concated.len });
+        console.printLine("input: {}\nlen: {}", .{ input, input.len });
+        console.printLine("concated: {}\nlen: {}", .{ concated, concated.len });
     }
 
     try printTitle(arenaAlloc, "Struct");
@@ -198,21 +213,15 @@ pub fn main() !void {
         //                           └-> this is necessary because `text` has no default value.
         someStruct.num = 10;
         someStruct.text = "hello";
-        try console.printLine("num: {}", .{someStruct.num});
-        try console.printLine("text: {}", .{someStruct.text});
+        console.printLine("num: {}", .{someStruct.num});
+        console.printLine("text: {}", .{someStruct.text});
 
         var astruct: returnStruct() = undefined;
         //         ^^^^^^^^^^^^^^^^
         //         └-> function returning anonymous struct can be used as a type.
         astruct = returnStruct(){};
-        try console.printLine("a: {}", .{astruct.a});
-        try console.printLine("b: {}", .{astruct.b});
-    }
-}
-
-fn zeroArray(comptime T: type, array: []T) void {
-    for (array) |*item| {
-        item.* = 0;
+        console.printLine("a: {}", .{astruct.a});
+        console.printLine("b: {}", .{astruct.b});
     }
 }
 
