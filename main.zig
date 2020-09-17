@@ -223,6 +223,13 @@ pub fn main() !void {
         console.printLine("a: {}", .{astruct.a});
         console.printLine("b: {}", .{astruct.b});
     }
+
+    try printTitle(arenaAlloc, "Error");
+    {
+        errTest(&console) catch |err| {
+            console.printLine("{}", .{err});
+        };
+    }
 }
 
 fn returnStruct() type {
@@ -230,4 +237,17 @@ fn returnStruct() type {
         a: i32 = 1,
         b: i32 = 10,
     };
+}
+
+fn errFn() !void {
+    const Error = error{TestError};
+    return Error.TestError;
+}
+
+fn errTest(console: *const winconsole.ConsoleIO) !void {
+    defer console.writeLine("defer: before error");
+    errdefer console.writeLine("errdefer: before error");
+    try errFn();
+    defer console.writeLine("defer: after error");
+    errdefer console.writeLine("errdefer: after error");
 }
