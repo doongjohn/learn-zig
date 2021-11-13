@@ -1,3 +1,9 @@
+// Learning Zig!
+
+// Looking into Odin and Zig
+// https://news.ycombinator.com/item?id=28440579
+
+
 const std = @import("std");
 const fmt = std.fmt;
 const mem = std.mem;
