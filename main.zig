@@ -179,7 +179,10 @@ pub fn main() !void {
         //                               Can't read Unicode from Windows stdin!
         defer generalAlloc.free(input);
 
-        const trimmed = mem.trim(u8, input, "\r\n "); // including \r is important in windows!
+        const trimmed = mem.trim(u8, input, "\r\n ");
+        //                                   ^^
+        //                                   └> including '\r' is important in windows!
+        //                                      https://github.com/ziglang/zig/issues/6754
         const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ trimmed, "..." });
         defer generalAlloc.free(concated);
 
