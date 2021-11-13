@@ -3,13 +3,22 @@
 // Looking into Odin and Zig
 // https://news.ycombinator.com/item?id=28440579
 
-
 const std = @import("std");
 const fmt = std.fmt;
 const mem = std.mem;
-const printTitle = @import("consoleutils.zig").printTitle;
 const winconsole = @import("winconsole.zig");
 const ConsoleIO = winconsole.ConsoleIO;
+
+pub fn printTitle(allocator: *mem.Allocator, title: []const u8) !void {
+    const concated = try mem.concat(allocator, u8, &[_][]const u8{ "\n<- ", mem.trim(u8, title, "\n "), " ->\n" });
+    const line = try allocator.alloc(u8, concated.len - 1);
+    for (line[0..]) |*char, i| {
+        char.* = if (i != line.len - 1) '-' else '\n';
+    }
+    const stdout = std.io.getStdOut().writer();
+    _ = try stdout.write(concated);
+    _ = try stdout.write(line);
+}
 
 pub fn main() !void {
     // Init arena allocator
@@ -145,7 +154,7 @@ pub fn main() !void {
         var arrayLength: usize = 0;
         ConsoleIO.write("array length: ");
         while (true) {
-            const arrayLengthInput = try ConsoleIO.readLine(generalAlloc);
+            const arrayLengthInput = try ConsoleIO.winReadLine(generalAlloc);
             defer generalAlloc.free(arrayLengthInput);
 
             arrayLength = fmt.parseInt(usize, arrayLengthInput, 10) catch {
@@ -197,7 +206,7 @@ pub fn main() !void {
     }
     {
         ConsoleIO.write("\nconsole input(win api): ");
-        const input: []u8 = try ConsoleIO.readLine(generalAlloc);
+        const input: []u8 = try ConsoleIO.winReadLine(generalAlloc);
         defer generalAlloc.free(input);
 
         const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ input, "..." }); // FIXME

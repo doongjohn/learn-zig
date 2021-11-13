@@ -33,7 +33,7 @@ pub const ConsoleIO = struct {
         stdout.print(format ++ "\n", args) catch unreachable;
     }
 
-    pub fn readLine(allocator: *mem.Allocator) ![]u8 {
+    pub fn winReadLine(allocator: *mem.Allocator) ![]u8 {
         var readBuff: [256]u16 = undefined;
         var readCount: u32 = undefined;
         _ = ReadConsoleW(stdinHandle, &readBuff, readBuff.len, &readCount, null);
