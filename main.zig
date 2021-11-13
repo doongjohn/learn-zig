@@ -175,7 +175,7 @@ pub fn main() !void {
         const stdin = std.io.getStdIn().reader();
         const input: []u8 = try stdin.readUntilDelimiterAlloc(generalAlloc, '\n', 256);
         //                            ^^^^^^^^^^^^^^^^^^^^^^^
-        //                            └> Warning! (zig 0.6.0)
+        //                            └> Warning! (zig 0.8.1)
         //                               Can't read Unicode from Windows stdin!
         defer generalAlloc.free(input);
 
