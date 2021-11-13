@@ -10,31 +10,30 @@ var stdinHandle: os.fd_t = undefined;
 var stdout: std.fs.File.Writer = undefined;
 
 pub const ConsoleIO = struct {
-    pub fn init() ConsoleIO {
+    pub fn init() void {
         _ = SetConsoleOutputCP(65001);
         stdout = std.io.getStdOut().writer();
         stdinHandle = std.io.getStdIn().handle;
-        return ConsoleIO{};
     }
 
-    const Self = @This();
+    // const Self = @This();
 
-    pub fn write(self: Self, bytes: []const u8) void {
+    pub fn write(bytes: []const u8) void {
         _ = stdout.write(bytes) catch unreachable;
     }
-    pub fn writeLine(self: ConsoleIO, bytes: []const u8) void {
+    pub fn writeLine(bytes: []const u8) void {
         _ = stdout.write(bytes) catch unreachable;
         _ = stdout.write("\n") catch unreachable;
     }
 
-    pub fn print(self: Self, comptime format: []const u8, args: anytype) void {
+    pub fn print(comptime format: []const u8, args: anytype) void {
         stdout.print(format, args) catch unreachable;
     }
-    pub fn printLine(self: Self, comptime format: []const u8, args: anytype) void {
+    pub fn printLine(comptime format: []const u8, args: anytype) void {
         stdout.print(format ++ "\n", args) catch unreachable;
     }
 
-    pub fn readLine(self: Self, allocator: *mem.Allocator) ![]u8 {
+    pub fn readLine(allocator: *mem.Allocator) ![]u8 {
         var readBuff: [256]u16 = undefined;
         var readCount: u32 = undefined;
         _ = ReadConsoleW(stdinHandle, &readBuff, readBuff.len, &readCount, null);

@@ -1,11 +1,9 @@
-// zig version
-// 0.6.0+9fe4c8923
-
 const std = @import("std");
 const fmt = std.fmt;
 const mem = std.mem;
 const printTitle = @import("consoleutils.zig").printTitle;
 const winconsole = @import("winconsole.zig");
+const ConsoleIO = winconsole.ConsoleIO;
 
 pub fn main() !void {
     // Init arena allocator
@@ -19,10 +17,10 @@ pub fn main() !void {
     const generalAlloc = &generalAllocInst.allocator;
 
     // Init rng
-    var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.timestamp())).random;
+    var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.timestamp())).random();
 
     // Init console
-    const console = winconsole.ConsoleIO.init();
+    ConsoleIO.init();
 
     try printTitle(arenaAlloc, "Block");
     {
@@ -35,10 +33,10 @@ pub fn main() !void {
                 break :blk "hello";
             }
         };
-        console.writeLine(someText);
+        ConsoleIO.writeLine(someText);
 
         // this is also possible.
-        console.writeLine(blk: {
+        ConsoleIO.writeLine(blk: {
             if (false) {
                 break :blk "wow";
             } else {
@@ -50,7 +48,8 @@ pub fn main() !void {
     try printTitle(arenaAlloc, "Pointer");
     {
         var num: i32 = 10;
-        console.printLine("num: {}", .{num});
+        // console.printLine("num: {d}", .{num});
+        ConsoleIO.printLine("num: {d}", .{num});
 
         var numPtr: *i32 = undefined;
         //          ^^^^ --> pointer type.
@@ -59,13 +58,14 @@ pub fn main() !void {
         numPtr.* = 1;
         //    ^^ --> dereference pointer.
 
-        console.printLine("num: {}", .{num});
+        ConsoleIO.printLine("num: {d}", .{num});
     }
     {
         var num: i32 = 10;
         const ptr1: *const i32 = &num;
-        //          ^^^^^^ --> you can't change its dereferenced value.
+        //          ^^^^^^ --> immutable dereferenced value.
         //                     ptr1.* = 1; (compile time error.)
+        _ = ptr1;
     }
     {
         var heapInt = try generalAlloc.create(i32);
@@ -74,7 +74,7 @@ pub fn main() !void {
         //                 ^^^^^^^ --> deallocates a single item.
 
         heapInt.* = 100;
-        console.printLine("num: {}", .{heapInt.*});
+        ConsoleIO.printLine("num: {d}", .{heapInt.*});
     }
     {
         var ptr: ?*i32 = null;
@@ -84,13 +84,13 @@ pub fn main() !void {
         //                            ^^ --> unwraps optional. (runtime error if null.)
 
         ptr.?.* = 100;
-        console.printLine("optional pointer value: {}", .{ptr.?.*});
+        ConsoleIO.printLine("optional pointer value: {d}", .{ptr.?.*});
 
         if (ptr) |value| { // this also unwraps optional
             value.* = 10;
-            console.printLine("optional pointer value: {}", .{value.*});
+            ConsoleIO.printLine("optional pointer value: {d}", .{value.*});
         } else {
-            console.writeLine("optional pointer value: null");
+            ConsoleIO.writeLine("optional pointer value: null");
         }
     }
 
@@ -99,16 +99,16 @@ pub fn main() !void {
         var array = [3]i32{ 1, 2, 3 };
         //          ^^^ --> length of this array.
         for (array) |item, i| {
-            console.printLine("[{}]: {}", .{ i, item });
+            ConsoleIO.printLine("[{d}]: {d}", .{ i, item });
         }
 
         mem.set(i32, &array, 0);
         for (array) |item, i| {
-            console.printLine("[{}]: {}", .{ i, item });
+            ConsoleIO.printLine("[{d}]: {d}", .{ i, item });
         }
     }
     {
-        console.writeLine("array:");
+        ConsoleIO.writeLine("array:");
         var array = [_]i32{ 1, 10, 100 }; // this array is mutable because it's declared as `var`.
         //            ^^^ --> same as [3]i32 because it has 3 items.
         for (array) |*item, i| {
@@ -116,34 +116,34 @@ pub fn main() !void {
             //       |      └> current index.
             //       └> get array[i] as a pointer. (so that we can change its value.)
             item.* = @intCast(i32, i) + 1;
-            console.print("[{}]: {}\n", .{ i, item.* });
+            ConsoleIO.print("[{d}]: {d}\n", .{ i, item.* });
         }
 
-        console.writeLine("array ptr:");
+        ConsoleIO.writeLine("array ptr:");
         const ptr = &array; // pointer to an array.
         for (ptr) |item, i| {
-            console.printLine("[{}]: {}", .{ i, item });
+            ConsoleIO.printLine("[{d}]: {d}", .{ i, item });
         }
 
-        console.writeLine("slice:");
+        ConsoleIO.writeLine("slice:");
         const slice = array[0..]; // a slice is a pointer and a length. (its length is known at runtime.)
         //                  ^^^
         //                  └> from index 0 to the end.
         for (slice) |item, i| {
-            console.printLine("[{}]: {}", .{ i, item });
+            ConsoleIO.printLine("[{d}]: {d}", .{ i, item });
         }
     }
     {
-        console.writeLine("heap allocated array");
+        ConsoleIO.writeLine("heap allocated array");
 
         var arrayLength: usize = 0;
-        console.write("array length: ");
+        ConsoleIO.write("array length: ");
         while (true) {
-            const arrayLengthInput = try console.readLine(generalAlloc);
+            const arrayLengthInput = try ConsoleIO.readLine(generalAlloc);
             defer generalAlloc.free(arrayLengthInput);
 
             arrayLength = fmt.parseInt(usize, arrayLengthInput, 10) catch {
-                console.write("please input usize: ");
+                ConsoleIO.write("please input usize: ");
                 continue;
             };
             break;
@@ -154,48 +154,48 @@ pub fn main() !void {
         defer generalAlloc.free(array);
         //                 ^^^^ --> deallocates array.
 
-        console.writeLine("apply random values:");
+        ConsoleIO.writeLine("apply random values:");
         for (array) |*item, i| {
             item.* = rng.intRangeAtMost(i32, 1, 10); // generate random value
-            console.printLine("[{}]: {}", .{ i, item.* });
+            ConsoleIO.printLine("[{d}]: {d}", .{ i, item.* });
         }
     }
     {
-        console.writeLine("concat array:");
+        ConsoleIO.writeLine("concat array:");
         const str = try mem.concat(generalAlloc, u8, &[_][]const u8{ "wow ", "hey ", "yay" });
         defer generalAlloc.free(str);
 
-        console.writeLine(str);
-        console.printLine("{}", .{str.len});
+        ConsoleIO.writeLine(str);
+        ConsoleIO.printLine("{d}", .{str.len});
     }
 
     try printTitle(arenaAlloc, "Console IO");
     {
-        console.write("\nconsole input(std): ");
-        const stdin = std.io.getStdIn().inStream();
+        ConsoleIO.write("\nconsole input(std): ");
+        const stdin = std.io.getStdIn().reader();
         const input: []u8 = try stdin.readUntilDelimiterAlloc(generalAlloc, '\n', 256);
         //                            ^^^^^^^^^^^^^^^^^^^^^^^
         //                            └> Warning! (zig 0.6.0)
         //                               Can't read Unicode from Windows stdin!
         defer generalAlloc.free(input);
 
-        const trimmed = fmt.trim(input);
+        const trimmed = mem.trim(u8, input, "\n ");
         const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ trimmed, "..." });
         defer generalAlloc.free(concated);
 
-        console.printLine("input: {}\nlen: {}", .{ trimmed, trimmed.len });
-        console.printLine("concated: {}\nlen: {}", .{ concated, concated.len });
+        ConsoleIO.printLine("input: {s}\nlen: {d}", .{ trimmed, trimmed.len });
+        ConsoleIO.printLine("concated: {s}\nlen: {d}", .{ concated, concated.len });
     }
     {
-        console.write("\nconsole input(win api): ");
-        const input: []u8 = try console.readLine(generalAlloc);
+        ConsoleIO.write("\nconsole input(win api): ");
+        const input: []u8 = try ConsoleIO.readLine(generalAlloc);
         defer generalAlloc.free(input);
 
-        const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ input, "..." });
+        const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ input, "..." }); // FIXME
         defer generalAlloc.free(concated);
 
-        console.printLine("input: {}\nlen: {}", .{ input, input.len });
-        console.printLine("concated: {}\nlen: {}", .{ concated, concated.len });
+        ConsoleIO.printLine("input: {s}\nlen: {d}", .{ input, input.len });
+        ConsoleIO.printLine("concated: {s}\nlen: {d}", .{ concated, concated.len });
     }
 
     try printTitle(arenaAlloc, "Struct");
@@ -213,26 +213,32 @@ pub fn main() !void {
         //                           └-> this is necessary because `text` has no default value.
         someStruct.num = 10;
         someStruct.text = "hello";
-        console.printLine("num: {}", .{someStruct.num});
-        console.printLine("text: {}", .{someStruct.text});
+        ConsoleIO.printLine("num: {d}", .{someStruct.num});
+        ConsoleIO.printLine("text: {s}", .{someStruct.text});
 
-        var astruct: returnStruct() = undefined;
+        var astruct: ReturnStruct() = undefined;
         //         ^^^^^^^^^^^^^^^^
         //         └-> function returning anonymous struct can be used as a type.
-        astruct = returnStruct(){};
-        console.printLine("a: {}", .{astruct.a});
-        console.printLine("b: {}", .{astruct.b});
+        astruct = ReturnStruct(){};
+        ConsoleIO.printLine("a: {d}", .{astruct.a});
+        ConsoleIO.printLine("b: {d}", .{astruct.b});
     }
 
     try printTitle(arenaAlloc, "Error");
     {
-        errTest(&console) catch |err| {
-            console.printLine("{}", .{err});
+        errTest() catch |err| {
+            ConsoleIO.printLine("{s}", .{err});
         };
+    }
+
+    {
+        ConsoleIO.writeLine("\npress any key to exit...");
+        const stdin = std.io.getStdIn().reader();
+        _ = try stdin.readByte();
     }
 }
 
-fn returnStruct() type {
+fn ReturnStruct() type {
     return struct {
         a: i32 = 1,
         b: i32 = 10,
@@ -244,10 +250,10 @@ fn errFn() !void {
     return Error.TestError;
 }
 
-fn errTest(console: *const winconsole.ConsoleIO) !void {
-    defer console.writeLine("defer: before error");
-    errdefer console.writeLine("errdefer: before error");
+fn errTest() !void {
+    defer ConsoleIO.writeLine("defer: before error");
+    errdefer ConsoleIO.writeLine("errdefer: before error");
     try errFn();
-    defer console.writeLine("defer: after error");
-    errdefer console.writeLine("errdefer: after error");
+    defer ConsoleIO.writeLine("defer: after error");
+    errdefer ConsoleIO.writeLine("errdefer: after error");
 }
