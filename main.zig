@@ -4,33 +4,29 @@
 // https://news.ycombinator.com/item?id=28440579
 
 const std = @import("std");
-const fmt = std.fmt;
 const mem = std.mem;
+const fmt = std.fmt;
 const console = @import("console.zig");
 
-pub fn title(comptime text: []const u8) !void {
+pub fn title(comptime text: []const u8) void {
     const concated = "\n[Learn]: " ++ text;
     console.println(concated ++ "\n" ++ "-" ** (concated.len - 1));
 }
 
 pub fn main() !void {
-    // Init arena allocator
-    // var arenaAllocObj = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    // defer arenaAllocObj.deinit();
-    // const arenaAlloc = &arenaAllocObj.allocator;
-
     // Init general purpose allocator
-    var generalAllocObj = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = generalAllocObj.deinit();
-    const generalAlloc = &generalAllocObj.allocator;
+    var gallocObj = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gallocObj.deinit();
+    const galloc = &gallocObj.allocator;
 
-    // Init rng
-    var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.timestamp())).random();
+    // Init random number generator
+    const rngSeed = @intCast(u64, std.time.timestamp());
+    const rng = std.rand.DefaultPrng.init(rngSeed).random();
 
     // Init console
     console.init();
 
-    try title("Block");
+    title("Block");
     {
         const someText = blk: {
             //           ^^^^ --> this is a name of a block
@@ -53,7 +49,54 @@ pub fn main() !void {
         });
     }
 
-    try title("Pointer");
+    title("Loop");
+    {
+        console.println("while loop:");
+        {
+            var i: i64 = 0;
+            while (i < 5) {
+                defer i += 1;
+                console.printf("{d} ", .{i});
+            }
+            console.println("");
+
+            i = 0;
+            while (i < 5) : (i += 1) {
+                console.printf("{d} ", .{i});
+            }
+            console.println("");
+
+            i = 0;
+            while (i < 5) : ({
+                console.printf("{d} ", .{i});
+                i += 1;
+            }) {
+                console.print("! ");
+            }
+            console.println("");
+        }
+
+        console.println("\nfor loop:");
+        {
+            const string = "Hello world!";
+
+            for (string) |character, index| {
+                console.printf("string[{d}] == {c}\n", .{ index, character });
+            }
+
+            for (string) |character| {
+                console.printf("{c} ", .{character});
+            }
+            console.println("");
+
+            for (string) |_, index| {
+                console.printf("{d} ", .{index});
+            }
+            console.println("");
+        }
+    }
+
+    title("Pointer");
     {
         var num: i32 = 10;
         // console.printf("num: {d}", .{num});
@@ -76,9 +119,9 @@ pub fn main() !void {
         _ = ptr1;
     }
     {
-        var heapInt = try generalAlloc.create(i32);
+        var heapInt = try galloc.create(i32);
         //                             ^^^^^^ --> allocates a single item
-        defer generalAlloc.destroy(heapInt);
+        defer galloc.destroy(heapInt);
         //                 ^^^^^^^ --> deallocates a single item
 
         heapInt.* = 100;
@@ -86,9 +129,9 @@ pub fn main() !void {
     }
     {
         var ptr: ?*i32 = null;
-        //       ^ --> optional type. (null is allowed.)
-        ptr = try generalAlloc.create(i32);
-        defer generalAlloc.destroy(ptr.?);
+        //       ^ --> optional type (null is allowed)
+        ptr = try galloc.create(i32);
+        defer galloc.destroy(ptr.?);
         //                            ^^ --> unwraps optional (runtime error if null)
 
         ptr.?.* = 100;
@@ -102,53 +145,47 @@ pub fn main() !void {
         }
     }
 
-    try title("Array");
+    title("Array");
     {
-        var array = [3]i32{ 1, 2, 3 };
-        //          ^^^ --> length of this array
-        for (array) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
-        }
-
-        mem.set(i32, &array, 0);
-        for (array) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
-        }
-    }
-    {
-        console.println("array:");
-        var array = [_]i32{ 1, 10, 100 }; // this array is mutable because it's declared as `var`
-        //            ^^^ --> same as [3]i32 because it has 3 items
+        console.println("array (stack allocated):");
+        var array = [_]i64{ 1, 10, 100 }; // this array is mutable because it's declared as `var`
+        //            ^^^ --> same as [3]i64 because it has 3 items
         for (array) |*item, i| {
             //       ^^^^^  ^
             //       |      └> current index
-            //       └> get array[i] as a pointer. (so that we can change its value.)
-            item.* = @intCast(i32, i) + 1;
+            //       └> get array[i] as a pointer (so that we can change its value)
+            item.* = @intCast(i64, i) + 1;
             console.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
-        console.println("array ptr:");
+        console.println("\narray ptr:");
         const ptr = &array; // pointer to an array
         for (ptr) |item, i| {
             console.printf("[{d}]: {d}\n", .{ i, item });
         }
 
-        console.println("slice:");
-        const slice = array[0..]; // a slice is a pointer and a length. (its length is known at runtime.)
+        console.println("\nslice:");
+        const slice = array[0..]; // a slice is a pointer and a length (its length is known at runtime)
         //                  ^^^
         //                  └> from index 0 to the end
         for (slice) |item, i| {
             console.printf("[{d}]: {d}\n", .{ i, item });
         }
+
+        console.println("\nmem.set:");
+        mem.set(i64, &array, 0);
+        //  ^^^^^^^^^^^^^^^^^^^ --> set every elements in array to zero
+        for (array) |item, i| {
+            console.printf("[{d}]: {d}\n", .{ i, item });
+        }
     }
     {
-        console.println("heap allocated array:");
-        var arrayLength: usize = 0;
-
+        console.println("\narray (heap allocated):");
         console.print(">> array length: ");
+        var arrayLength: usize = 0;
         while (true) {
-            const arrayLengthInput = try console.readLine(generalAlloc);
-            defer generalAlloc.free(arrayLengthInput);
+            const arrayLengthInput = try console.readLine(galloc);
+            defer galloc.free(arrayLengthInput);
             arrayLength = fmt.parseInt(usize, arrayLengthInput, 10) catch {
                 // handle error
                 console.print("please input positive number: ");
@@ -157,52 +194,52 @@ pub fn main() !void {
             break;
         }
 
-        const array = try generalAlloc.alloc(i32, arrayLength);
+        const array = try galloc.alloc(i64, arrayLength);
         //                             ^^^^^ --> allocates array
-        defer generalAlloc.free(array);
+        defer galloc.free(array);
         //                 ^^^^ --> deallocates array
 
         console.println("apply random values:");
         for (array) |*item, i| {
-            item.* = rng.intRangeAtMost(i32, 1, 10); // generate random value
+            item.* = rng.intRangeAtMost(i64, 1, 10); // generate random value
             console.printf("[{d}]: {d}\n", .{ i, item.* });
         }
     }
     {
-        console.println("concat array comptime:");
+        console.println("\nconcat array comptime:");
         const concated = "wow " ++ "hey " ++ "yay";
         console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
     {
-        console.println("concat array alloc:");
+        console.println("\nconcat array runtime:");
         const words = [_][]const u8{ "wow ", "hey ", "yay" };
-        const concated = try mem.concat(generalAlloc, u8, words[0..]);
-        defer generalAlloc.free(concated);
+        const concated = try mem.concat(galloc, u8, words[0..]);
+        defer galloc.free(concated);
         console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
 
-    try title("Console IO");
+    title("Console IO");
     {
         console.print(">> console input: ");
-        const input = try console.readLine(generalAlloc);
-        defer generalAlloc.free(input);
+        const input = try console.readLine(galloc);
+        defer galloc.free(input);
 
         const trimmed = mem.trim(u8, input, "\r\n ");
         //                                   ^^ --> including '\r' is important in windows!
         //                                          https://github.com/ziglang/zig/issues/6754
-        const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ input, "!!!" });
-        defer generalAlloc.free(concated);
+        const concated = try mem.concat(galloc, u8, &[_][]const u8{ input, "!!!" });
+        defer galloc.free(concated);
 
         console.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
         console.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
     }
 
-    try title("Struct");
+    title("Struct");
     {
         // all structs are anonymous
         // see: https://ziglang.org/documentation/master/#Struct-Naming
         const SomeStruct = struct {
-            num: i32 = 0,
+            num: i64 = 0,
             //       ^^^ --> default value
             text: []const u8, // no default value
         };
@@ -223,7 +260,7 @@ pub fn main() !void {
         console.printf("b: {d}\n", .{astruct.b});
     }
 
-    try title("Error");
+    title("Error");
     {
         errTest() catch |err| {
             console.printf("{s}\n", .{err});
@@ -236,8 +273,8 @@ pub fn main() !void {
 
 fn ReturnStruct() type {
     return struct {
-        a: i32 = 1,
-        b: i32 = 10,
+        a: i64 = 1,
+        b: i64 = 10,
     };
 }
 
