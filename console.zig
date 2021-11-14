@@ -30,6 +30,10 @@ pub fn printf(comptime format: []const u8, args: anytype) void {
     stdout.print(format, args) catch unreachable;
 }
 
+pub fn readByte() u8 {
+    return stdin.readByte() catch unreachable;
+}
+
 pub fn readLine(allocator: *mem.Allocator) ![]u8 {
     const maxLen = 256;
     if (builtin.os.tag == .windows) {

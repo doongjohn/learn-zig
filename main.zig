@@ -230,11 +230,8 @@ pub fn main() !void {
         };
     }
 
-    {
-        console.println("\npress enter key to exit...");
-        const stdin = std.io.getStdIn().reader();
-        _ = try stdin.readByte();
-    }
+    console.println("\npress enter key to exit...");
+    _ = console.readByte();
 }
 
 fn ReturnStruct() type {
