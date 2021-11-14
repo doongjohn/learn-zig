@@ -8,21 +8,16 @@ const fmt = std.fmt;
 const mem = std.mem;
 const console = @import("console.zig");
 
-pub fn printTitle(allocator: *mem.Allocator, title: []const u8) !void {
-    const concated = try mem.concat(allocator, u8, &[_][]const u8{ "\n<- ", mem.trim(u8, title, "\n "), " ->\n" });
-    const line = try allocator.alloc(u8, concated.len - 1);
-    for (line[0..]) |*char, i| {
-        char.* = if (i != line.len - 1) '-' else '\n';
-    }
-    console.print(concated);
-    console.print(line);
+pub fn title(comptime text: []const u8) !void {
+    const concated = "\n[Learn]: " ++ text;
+    console.println(concated ++ "\n" ++ "-" ** (concated.len - 1));
 }
 
 pub fn main() !void {
     // Init arena allocator
-    var arenaAllocObj = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    defer arenaAllocObj.deinit();
-    const arenaAlloc = &arenaAllocObj.allocator;
+    // var arenaAllocObj = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    // defer arenaAllocObj.deinit();
+    // const arenaAlloc = &arenaAllocObj.allocator;
 
     // Init general purpose allocator
     var generalAllocObj = std.heap.GeneralPurposeAllocator(.{}){};
@@ -35,7 +30,7 @@ pub fn main() !void {
     // Init console
     console.init();
 
-    try printTitle(arenaAlloc, "Block");
+    try title("Block");
     {
         const someText = blk: {
             //           ^^^^ --> this is a name of a block
@@ -58,7 +53,7 @@ pub fn main() !void {
         });
     }
 
-    try printTitle(arenaAlloc, "Pointer");
+    try title("Pointer");
     {
         var num: i32 = 10;
         // console.printf("num: {d}", .{num});
@@ -107,7 +102,7 @@ pub fn main() !void {
         }
     }
 
-    try printTitle(arenaAlloc, "Array");
+    try title("Array");
     {
         var array = [3]i32{ 1, 2, 3 };
         //          ^^^ --> length of this array
@@ -147,16 +142,16 @@ pub fn main() !void {
         }
     }
     {
-        console.println("heap allocated array");
-
+        console.println("heap allocated array:");
         var arrayLength: usize = 0;
-        console.print("array length: ");
+
+        console.print(">> array length: ");
         while (true) {
             const arrayLengthInput = try console.readLine(generalAlloc);
             defer generalAlloc.free(arrayLengthInput);
-
             arrayLength = fmt.parseInt(usize, arrayLengthInput, 10) catch {
-                console.print("please input usize: ");
+                // handle error
+                console.print("please input positive number: ");
                 continue;
             };
             break;
@@ -174,33 +169,35 @@ pub fn main() !void {
         }
     }
     {
-        console.println("concat array:");
-        const str = try mem.concat(generalAlloc, u8, &[_][]const u8{ "wow ", "hey ", "yay" });
-        defer generalAlloc.free(str);
-
-        console.println(str);
-        console.printf("{d}\n", .{str.len});
+        console.println("concat array comptime:");
+        const concated = "wow " ++ "hey " ++ "yay";
+        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+    }
+    {
+        console.println("concat array alloc:");
+        const words = [_][]const u8{ "wow ", "hey ", "yay" };
+        const concated = try mem.concat(generalAlloc, u8, words[0..]);
+        defer generalAlloc.free(concated);
+        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
 
-    try printTitle(arenaAlloc, "Console IO");
+    try title("Console IO");
     {
-        console.print("\nconsole input: ");
-        const input: []u8 = try console.readLine(generalAlloc);
+        console.print(">> console input: ");
+        const input = try console.readLine(generalAlloc);
         defer generalAlloc.free(input);
 
-        // const trimmed = mem.trim(u8, input, "\r\n ");
+        const trimmed = mem.trim(u8, input, "\r\n ");
         //                                   ^^ --> including '\r' is important in windows!
         //                                          https://github.com/ziglang/zig/issues/6754
-        // const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ trimmed, "..." });
-        const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ input, "..." });
+        const concated = try mem.concat(generalAlloc, u8, &[_][]const u8{ input, "!!!" });
         defer generalAlloc.free(concated);
 
-        // console.printf("input: {s}\nlen: {d}", .{ trimmed, trimmed.len });
-        console.printf("input: {s}\nlen: {d}\n", .{ input, input.len });
+        console.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
         console.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
     }
 
-    try printTitle(arenaAlloc, "Struct");
+    try title("Struct");
     {
         // all structs are anonymous
         // see: https://ziglang.org/documentation/master/#Struct-Naming
@@ -226,7 +223,7 @@ pub fn main() !void {
         console.printf("b: {d}\n", .{astruct.b});
     }
 
-    try printTitle(arenaAlloc, "Error");
+    try title("Error");
     {
         errTest() catch |err| {
             console.printf("{s}\n", .{err});
