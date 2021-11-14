@@ -1,8 +1,7 @@
-const std = @import("std");
 const builtin = @import("builtin");
+const std = @import("std");
 const os = std.os;
 const mem = std.mem;
-const unicode = std.unicode;
 
 // windows console api
 extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) bool;
@@ -36,13 +35,13 @@ pub fn readByte() u8 {
 
 pub fn readLine(allocator: *mem.Allocator) ![]u8 {
     const maxLen = 256;
-    if (builtin.os.tag == .windows) {
+    if (comptime builtin.os.tag == .windows) {
         var readBuf: [maxLen]u16 = undefined;
         var readCount: u32 = undefined;
         _ = ReadConsoleW(stdinHandle, &readBuf, readBuf.len, &readCount, null);
 
         var utf8Buf: [1024]u8 = undefined;
-        const utf8Len = try unicode.utf16leToUtf8(&utf8Buf, readBuf[0..readCount]);
+        const utf8Len = try std.unicode.utf16leToUtf8(&utf8Buf, readBuf[0..readCount]);
         const trimmed = mem.trimRight(u8, utf8Buf[0..utf8Len], "\r\n"); // trim windows newline
 
         var result = try allocator.alloc(u8, trimmed.len);
