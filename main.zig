@@ -174,8 +174,15 @@ pub fn main() !void {
 
         console.println("\nmem.set:");
         mem.set(i64, &array, 0);
-        //  ^^^^^^^^^^^^^^^^^^^ --> set every elements in array to zero
+        //  ^^^^^^^^^^^^^^^^^^^ --> set every elements in array to 0
         for (array) |item, i| {
+            console.printf("[{d}]: {d}\n", .{ i, item });
+        }
+
+        console.println("\ninit array with ** operator:");
+        const array2 = [_]i64{ 1, 2 } ** 3;
+        //            ^^^^^^^^^^^ --> this will result: {1, 2, 1, 2, 1, 2}
+        for (array2) |item, i| {
             console.printf("[{d}]: {d}\n", .{ i, item });
         }
     }
@@ -208,6 +215,7 @@ pub fn main() !void {
     {
         console.println("\nconcat array comptime:");
         const concated = "wow " ++ "hey " ++ "yay";
+        //                      ^^ --> compiletime array concat operator
         console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
     {
