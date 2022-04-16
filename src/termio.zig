@@ -1,3 +1,5 @@
+// TODO: change this file to termutils.zig
+
 const builtin = @import("builtin");
 const std = @import("std");
 const mem = std.mem;
@@ -11,6 +13,10 @@ var stdout: std.fs.File.Writer = undefined;
 var stdin: std.fs.File.Reader = undefined;
 var stdinHandle: os.fd_t = undefined;
 
+const maxInput = 32768;
+var inputBuf: [maxInput]u8 = undefined;
+var inputBufUtf16: [maxInput]u16 = undefined;
+
 pub fn init() void {
     stdout = std.io.getStdOut().writer();
     stdin = std.io.getStdIn().reader();
@@ -20,11 +26,11 @@ pub fn init() void {
     }
 }
 
-pub fn print(bytes: []const u8) void {
-    _ = stdout.write(bytes) catch unreachable;
+pub fn print(str: []const u8) void {
+    _ = stdout.write(str) catch unreachable;
 }
-pub fn println(bytes: []const u8) void {
-    _ = stdout.write(bytes) catch unreachable;
+pub fn println(str: []const u8) void {
+    _ = stdout.write(str) catch unreachable;
     _ = stdout.write("\n") catch unreachable;
 }
 pub fn printf(comptime format: []const u8, args: anytype) void {
@@ -35,23 +41,18 @@ pub fn readByte() u8 {
     return stdin.readByte() catch unreachable;
 }
 
-pub fn readLine(allocator: mem.Allocator) ![]u8 {
-    const maxLen = 256;
+/// INFO: this function uses same buffer for the input!
+/// please copy the result if you want to store it in a different variable
+pub fn readLine() ![]const u8 {
     if (comptime builtin.os.tag == .windows) {
-        var readBuf: [maxLen]u16 = undefined;
         var readCount: u32 = undefined;
-        _ = ReadConsoleW(stdinHandle, &readBuf, readBuf.len, &readCount, null);
+        _ = ReadConsoleW(stdinHandle, &inputBufUtf16, maxInput, &readCount, null);
 
-        var utf8Buf: [1024]u8 = undefined;
-        const utf8Len = try std.unicode.utf16leToUtf8(utf8Buf[0..], readBuf[0..readCount]);
-        const trimmed = mem.trimRight(u8, utf8Buf[0..utf8Len], "\r\n"); // trim windows newline
-
-        var result = try allocator.alloc(u8, trimmed.len);
-        mem.copy(u8, result, trimmed);
-        return result;
+        const len = try std.unicode.utf16leToUtf8(inputBuf[0..], inputBufUtf16[0..readCount]);
+        return mem.trimRight(u8, inputBuf[0..len], "\r\n"); // trim windows newline
     } else {
-        return try stdin.readUntilDelimiterAlloc(allocator, '\n', maxLen);
-        //               ^^^^^^^^^^^^^^^^^^^^^^^
-        //               └> WARN: Can't read Unicode from Windows console!
+        return try stdin.readUntilDelimiter(inputBuf[0..], '\n');
+        //               ^^^^^^^^^^^^^^^^^^
+        //               └> NOTE: Can't read Unicode from Windows console!
     }
 }

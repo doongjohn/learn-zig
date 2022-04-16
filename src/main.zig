@@ -3,28 +3,29 @@
 const std = @import("std");
 const mem = std.mem;
 const fmt = std.fmt;
-const console = @import("console.zig");
+const termio = @import("termio.zig");
 
 pub fn title(comptime text: []const u8) void {
-    const concated = "\n[Learn]: " ++ text;
-    console.println(concated ++ "\n" ++ "-" ** (concated.len - 1));
+    const concated = "\n[" ++ text ++ "]";
+    termio.println(concated ++ "\n" ++ "-" ** (concated.len - 1));
 }
 
 pub fn main() !void {
-    // Init general purpose allocator
+    // init general purpose allocator
     var gpallocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpallocator.deinit();
     const galloc = gpallocator.allocator();
+    defer _ = gpallocator.deinit();
 
-    // Init random number generator
+    // init random number generator
     const rngSeed = @intCast(u64, std.time.timestamp());
     const rng = std.rand.DefaultPrng.init(rngSeed).random();
 
-    // Init console
-    console.init();
+    // init console
+    termio.init();
 
-    title("Block");
+    title("block");
     {
+        // block can return a value
         const someText = blk: {
             //           ^^^^ --> this is a name of a block
             if (true) {
@@ -34,96 +35,88 @@ pub fn main() !void {
                 break :blk "hello";
             }
         };
-        console.println(someText);
-
-        // this is also possible
-        console.println(blk: {
-            if (false) {
-                break :blk "wow";
-            } else {
-                break :blk "hello";
-            }
-        });
+        termio.println(someText);
     }
 
-    title("Loop");
+    title("loop");
+    termio.println("while loop:");
     {
-        console.println("while loop:");
-        {
-            var i: i64 = 0;
-            while (i < 5) {
-                defer i += 1;
-                console.printf("{d} ", .{i});
-            }
-            console.println("");
-
-            i = 0;
-            while (i < 5) : (i += 1) {
-                console.printf("{d} ", .{i});
-            }
-            console.println("");
-
-            i = 0;
-            while (i < 5) : ({
-                console.printf("{d} ", .{i});
-                i += 1;
-            }) {
-                console.print("! ");
-            }
-            console.println("");
+        var i: i64 = 0;
+        while (i < 5) {
+            defer i += 1;
+            termio.printf("{d} ", .{i});
         }
+        termio.println("");
 
-        console.println("\nfor loop:");
-        {
-            const string = "Hello world!";
-
-            for (string) |character, index| {
-                console.printf("string[{d}] == {c}\n", .{ index, character });
-            }
-
-            for (string) |character| {
-                console.printf("{c} ", .{character});
-            }
-            console.println("");
-
-            for (string) |_, index| {
-                console.printf("{d} ", .{index});
-            }
-            console.println("");
+        i = 0;
+        while (i < 5) : (i += 1) {
+            termio.printf("{d} ", .{i});
         }
+        termio.println("");
+
+        i = 0;
+        while (i < 5) : ({
+            termio.printf("{d} ", .{i});
+            i += 1;
+        }) {
+            termio.print("! ");
+        }
+        termio.println("");
     }
 
-    title("Pointer");
+    termio.println("\nfor loop:");
+    {
+        const string = "Hello world!";
+
+        for (string) |character, index| {
+            termio.printf("string[{d}]: {c}\n", .{ index, character });
+        }
+
+        for (string) |character| {
+            termio.printf("{c} ", .{character});
+        }
+        termio.println("");
+
+        for (string) |_, index| {
+            termio.printf("{d} ", .{index});
+        }
+        termio.println("");
+    }
+
+    title("pointer");
+    termio.println("\npointer:");
     {
         var num: i32 = 10;
-        // console.printf("num: {d}", .{num});
-        console.printf("num: {d}\n", .{num});
+        termio.printf("num: {d}\n", .{num});
 
         var numPtr: *i32 = undefined;
         //          ^^^^ --> pointer type
         numPtr = &num;
-        //       ^^^^ --> pointer of variable num
-        numPtr.* = 1;
+        //       ^^^^ --> pointer of variable num (just like c)
+        numPtr.* += 5;
         //    ^^ --> dereference pointer
 
-        console.printf("num: {d}\n", .{num});
+        termio.printf("num: {d}\n", .{num});
     }
+    termio.println("\nimmutable dereference:");
     {
-        var num: i32 = 10;
-        const ptr1: *const i32 = &num;
-        //          ^^^^^^ --> immutable dereferenced value
-        //                     ptr1.* = 1; (compile time error.)
-        _ = ptr1;
+        var num: i32 = 0;
+        const ptr: *const i32 = &num;
+        //          ^^^^^^ --> immutable dereference
+        //                     ptr.* = 1; <-- this is compile time error
+        termio.printf("num: {d}\n", .{ptr.*});
     }
+    termio.println("\nheap allocation:");
     {
         var heapInt = try galloc.create(i32);
-        //                             ^^^^^^ --> allocates a single item
+        //                       ^^^^^^^^^^^ --> allocates a single item
         defer galloc.destroy(heapInt);
-        //                 ^^^^^^^ --> deallocates a single item
+        //           ^^^^^^^^^^^^^^^^ --> deallocates a single item
 
         heapInt.* = 100;
-        console.printf("num: {d}\n", .{heapInt.*});
+        termio.printf("num: {d}\n", .{heapInt.*});
     }
+    termio.println("\noptional pointer:");
     {
         var ptr: ?*i32 = null;
         //       ^ --> optional type (null is allowed)
@@ -132,19 +125,19 @@ pub fn main() !void {
         //                            ^^ --> unwraps optional (runtime error if null)
 
         ptr.?.* = 100;
-        console.printf("optional pointer value: {d}\n", .{ptr.?.*});
+        termio.printf("optional pointer value: {d}\n", .{ptr.?.*});
 
         if (ptr) |value| { // this also unwraps optional
             value.* = 10;
-            console.printf("optional pointer value: {d}\n", .{value.*});
+            termio.printf("optional pointer value: {d}\n", .{value.*});
         } else {
-            console.println("optional pointer value: null");
+            termio.println("optional pointer value: null");
         }
     }
 
-    title("Array");
+    title("array");
     {
-        console.println("array (stack allocated):");
+        termio.println("array (stack allocated):");
         var array = [_]i64{ 1, 10, 100 }; // this array is mutable because it's declared as `var`
         //            ^^^ --> same as [3]i64 because it has 3 items
         for (array) |*item, i| {
@@ -152,94 +145,91 @@ pub fn main() !void {
             //       |      └> current index
             //       └> get array[i] as a pointer (so that we can change its value)
             item.* = @intCast(i64, i) + 1;
-            console.printf("[{d}]: {d}\n", .{ i, item.* });
+            termio.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
-        console.println("\narray ptr:");
+        termio.println("\npointer to array:");
         const ptr = &array; // pointer to an array
         for (ptr) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
+            termio.printf("[{d}]: {d}\n", .{ i, item });
         }
 
-        console.println("\nslice:");
+        termio.println("\nslice:");
         const slice = array[0..]; // a slice is a pointer and a length (its length is known at runtime)
         //                  ^^^
         //                  └> from index 0 to the end
         for (slice) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
+            termio.printf("[{d}]: {d}\n", .{ i, item });
         }
 
-        console.println("\nmem.set:");
+        termio.println("\nmem.set:");
         mem.set(i64, &array, 0);
         //  ^^^^^^^^^^^^^^^^^^^ --> set every elements in array to 0
         for (array) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
+            termio.printf("[{d}]: {d}\n", .{ i, item });
         }
 
-        console.println("\ninit array with ** operator:");
+        termio.println("\ninit array with ** operator:");
         const array2 = [_]i64{ 1, 2 } ** 3;
-        //            ^^^^^^^^^^^ --> this will result: {1, 2, 1, 2, 1, 2}
+        //                   ^^^^^^^^^^^^^ --> this will result: { 1, 2, 1, 2, 1, 2 }
         for (array2) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
+            termio.printf("[{d}]: {d}\n", .{ i, item });
         }
     }
     {
-        console.println("\narray (heap allocated):");
-        console.print(">> array length: ");
-        var arrayLength: usize = 0;
+        termio.println("\narray (heap allocated):");
+        termio.print(">> array length: ");
+        var arrayLength: usize = undefined;
         while (true) {
-            const arrayLengthInput = try console.readLine(galloc);
-            defer galloc.free(arrayLengthInput);
+            const input = try termio.readLine();
             // handle error
-            arrayLength = fmt.parseInt(usize, arrayLengthInput, 10) catch {
-                console.print("please input positive number: ");
+            arrayLength = fmt.parseInt(usize, input, 10) catch {
+                termio.print(">> please input positive number: ");
                 continue;
             };
             break;
         }
 
         const array = try galloc.alloc(i64, arrayLength);
-        //                             ^^^^^ --> allocates array
+        //                       ^^^^^ --> allocates array
         defer galloc.free(array);
-        //                 ^^^^ --> deallocates array
+        //           ^^^^ --> deallocates array
 
-        console.println("apply random values:");
+        termio.println("apply random values:");
         for (array) |*item, i| {
             item.* = rng.intRangeAtMost(i64, 1, 10); // generate random value
-            console.printf("[{d}]: {d}\n", .{ i, item.* });
+            termio.printf("[{d}]: {d}\n", .{ i, item.* });
         }
     }
     {
-        console.println("\nconcat array comptime:");
+        termio.println("\nconcat array compiletime:");
         const concated = "wow " ++ "hey " ++ "yay";
-        //                      ^^ --> compiletime array concat operator
-        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        //                      ^^ --> compiletime array concatenation operator
+        termio.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
     {
-        console.println("\nconcat array runtime:");
+        termio.println("\nconcat array runtime:");
         const words = [_][]const u8{ "wow ", "hey ", "yay" };
         const concated = try mem.concat(galloc, u8, words[0..]);
         defer galloc.free(concated);
-        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        termio.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
 
-    title("Console IO");
+    title("terminal io");
     {
-        console.print(">> console input: ");
-        const input = try console.readLine(galloc);
-        defer galloc.free(input);
-
+        termio.print(">> terminal input: ");
+        const input = try termio.readLine();
         const trimmed = mem.trim(u8, input, "\r\n ");
         //                                   ^^ --> including '\r' is important in windows!
         //                                          https://github.com/ziglang/zig/issues/6754
         const concated = try mem.concat(galloc, u8, &[_][]const u8{ input, "!!!" });
         defer galloc.free(concated);
 
-        console.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
-        console.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
+        termio.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
+        termio.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
     }
 
-    title("Struct");
+    title("struct");
     {
         // all structs are anonymous
         // see: https://ziglang.org/documentation/master/#Struct-Naming
@@ -254,26 +244,26 @@ pub fn main() !void {
         //                           └-> this is necessary because `text` has no default value
         someStruct.num = 10;
         someStruct.text = "hello";
-        console.printf("num: {d}\n", .{someStruct.num});
-        console.printf("text: {s}\n", .{someStruct.text});
+        termio.printf("num: {d}\n", .{someStruct.num});
+        termio.printf("text: {s}\n", .{someStruct.text});
 
         var astruct: ReturnStruct() = undefined;
         //           ^^^^^^^^^^^^^^
         //           └-> function returning anonymous struct can be used as a type
         astruct = ReturnStruct(){};
-        console.printf("a: {d}\n", .{astruct.a});
-        console.printf("b: {d}\n", .{astruct.b});
+        termio.printf("a: {d}\n", .{astruct.a});
+        termio.printf("b: {d}\n", .{astruct.b});
     }
 
-    title("Error");
+    title("error");
     {
         errTest() catch |err| {
-            console.printf("{s}\n", .{err});
+            termio.printf("{s}\n", .{err});
         };
     }
 
-    console.println("\npress enter key to exit...");
-    _ = console.readByte();
+    termio.println("\npress enter key to exit...");
+    _ = termio.readByte();
 }
 
 fn ReturnStruct() type {
@@ -289,9 +279,9 @@ fn errFn() !void {
 }
 
 fn errTest() !void {
-    defer console.println("defer: before error");
-    errdefer console.println("errdefer: before error");
+    defer termio.println("defer: before error");
+    errdefer termio.println("errdefer: before error");
     try errFn();
-    defer console.println("defer: after error");
-    errdefer console.println("errdefer: after error");
+    defer termio.println("defer: after error");
+    errdefer termio.println("errdefer: after error");
 }
