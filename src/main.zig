@@ -1,8 +1,5 @@
 // Learning Zig!
 
-// Looking into Odin and Zig
-// https://news.ycombinator.com/item?id=28440579
-
 const std = @import("std");
 const mem = std.mem;
 const fmt = std.fmt;
@@ -15,9 +12,9 @@ pub fn title(comptime text: []const u8) void {
 
 pub fn main() !void {
     // Init general purpose allocator
-    var gallocObj = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gallocObj.deinit();
-    const galloc = &gallocObj.allocator;
+    var gpallocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpallocator.deinit();
+    const galloc = gpallocator.allocator();
 
     // Init random number generator
     const rngSeed = @intCast(u64, std.time.timestamp());
@@ -193,8 +190,8 @@ pub fn main() !void {
         while (true) {
             const arrayLengthInput = try console.readLine(galloc);
             defer galloc.free(arrayLengthInput);
+            // handle error
             arrayLength = fmt.parseInt(usize, arrayLengthInput, 10) catch {
-                // handle error
                 console.print("please input positive number: ");
                 continue;
             };
@@ -261,8 +258,8 @@ pub fn main() !void {
         console.printf("text: {s}\n", .{someStruct.text});
 
         var astruct: ReturnStruct() = undefined;
-        //         ^^^^^^^^^^^^^^^^
-        //         └-> function returning anonymous struct can be used as a type
+        //           ^^^^^^^^^^^^^^
+        //           └-> function returning anonymous struct can be used as a type
         astruct = ReturnStruct(){};
         console.printf("a: {d}\n", .{astruct.a});
         console.printf("b: {d}\n", .{astruct.b});
