@@ -88,11 +88,12 @@ pub fn main() !void {
     title("block");
     {
         // block can return a value
-        const someText = blk: {
-            //           ^^^^ --> this is a name of a block
+        var someText = blk: {
+            //         ^^^^ --> this is a name of a block
             if (true) {
-                break :blk "wow"; // break out of `blk` and return "wow"
-                //                   https://ziglang.org/documentation/master/#blocks
+                break :blk "wow";
+                //    ^^^^^^^^^^ -->break out of `blk` and return "wow"
+                //                  https://ziglang.org/documentation/master/#blocks
             } else {
                 break :blk "hello";
             }
@@ -163,14 +164,14 @@ pub fn main() !void {
         title2("immutable dereference");
         var num: i32 = 20;
         var ptr: *const i32 = &num;
-        //          ^^^^^^ --> immutable dereference
+        //       ^^^^^^ --> immutable dereference
         //                     ptr.* = 1; <-- this is compile time error
         term.printf("num: {d}\n", .{ptr.*});
     }
     {
         title2("heap allocation");
         const heapInt = try galloc.create(i32);
-        //                       ^^^^^^^^^^^ --> allocates a single item
+        //                         ^^^^^^^^^^^ --> allocates a single item
         defer galloc.destroy(heapInt);
         //           ^^^^^^^^^^^^^^^^ --> deallocates a single item
 
@@ -181,6 +182,7 @@ pub fn main() !void {
         title2("optional pointer");
         var ptr: ?*i32 = null;
         //       ^ --> optional type (null is allowed)
+        //             it is zero cost for the pointer
         ptr = try galloc.create(i32);
         defer galloc.destroy(ptr.?);
         //                      ^^ --> unwraps optional (runtime error if null)
@@ -328,7 +330,7 @@ pub fn main() !void {
         title2("without error");
         _ = returnNoError(rng) catch |err| {
             term.printf("{s}\n", .{err});
-        };
+        }
     }
 
     term.print("\npress enter to exit...");
@@ -352,12 +354,15 @@ fn compareRandom(rng: std.rand.Random, comp: i64) !i64 {
     }
 }
 fn returnError(rng: std.rand.Random) !i64 {
-    var num = try compareRandom(rng, 0);
     errdefer term.println("errdefer");
+    var num = try compareRandom(rng, 0);
+    //        ^^^ -> `try` is equal to `someFunc() catch |err| return err;`
+    //               so if it returns an error,
+    //               code below here will not be executed
     return num;
 }
 fn returnNoError(rng: std.rand.Random) !i64 {
-    var num = try compareRandom(rng, 3);
     errdefer term.println("errdefer");
+    var num = try compareRandom(rng, 3);
     return num;
 }
