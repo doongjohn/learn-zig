@@ -101,8 +101,8 @@ pub fn main() !void {
     }
 
     title("loop");
-    title2("while loop");
     {
+        title2("while loop");
         var i: i64 = 0;
         while (i < 5) {
             defer i += 1;
@@ -125,8 +125,8 @@ pub fn main() !void {
         }
         term.println("");
     }
-    title2("for loop");
     {
+        title2("for loop");
         const string = "Hello world!";
 
         for (string) |byte, index| {
@@ -145,8 +145,8 @@ pub fn main() !void {
     }
 
     title("pointer");
-    title2("basic pointer");
     {
+        title2("basic pointer");
         var num: i32 = 10;
         term.printf("num: {d}\n", .{num});
 
@@ -159,17 +159,17 @@ pub fn main() !void {
 
         term.printf("num: {d}\n", .{num});
     }
-    title2("immutable dereference");
     {
-        var num: i32 = 0;
+        title2("immutable dereference");
+        var num: i32 = 20;
         var ptr: *const i32 = &num;
         //          ^^^^^^ --> immutable dereference
         //                     ptr.* = 1; <-- this is compile time error
         term.printf("num: {d}\n", .{ptr.*});
     }
-    title2("heap allocation");
     {
-        var heapInt = try galloc.create(i32);
+        title2("heap allocation");
+        const heapInt = try galloc.create(i32);
         //                       ^^^^^^^^^^^ --> allocates a single item
         defer galloc.destroy(heapInt);
         //           ^^^^^^^^^^^^^^^^ --> deallocates a single item
@@ -177,18 +177,20 @@ pub fn main() !void {
         heapInt.* = 100;
         term.printf("num: {d}\n", .{heapInt.*});
     }
-    title2("optional pointer");
     {
+        title2("optional pointer");
         var ptr: ?*i32 = null;
         //       ^ --> optional type (null is allowed)
         ptr = try galloc.create(i32);
         defer galloc.destroy(ptr.?);
-        //                            ^^ --> unwraps optional (runtime error if null)
+        //                      ^^ --> unwraps optional (runtime error if null)
 
         ptr.?.* = 100;
         term.printf("optional pointer value: {d}\n", .{ptr.?.*});
 
-        if (ptr) |value| { // this also unwraps optional
+        if (ptr) |value| {
+        //       ^^^^^^^ --> this unwraps ptr and the captured value is
+        //                   only available in this block
             value.* = 10;
             term.printf("optional pointer value: {d}\n", .{value.*});
         } else {
@@ -198,18 +200,18 @@ pub fn main() !void {
 
     title("array");
     {
-        title2("array (stack allocated)");
-        var array = [_]i64{ 1, 10, 100 }; // this array is mutable because it's declared as `var`
-        //            ^^^ --> same as [3]i64 because it has 3 items
+        title2("basic array");
+        var array = [_]i64{ 1, 10, 100 }; // this array is mutable because it is declared as `var`
+        //          ^^^ --> same as [3]i64 because it has 3 items (zig can infer the length)
         for (array) |*item, i| {
             //       ^^^^^  ^
             //       |      └> current index
-            //       └> get array[i] as a pointer (so that we can change its value)
-            item.* = @intCast(i64, i) + 1;
+            //       └> get element as a pointer (so that we can change its value)
+            item.* = @intCast(i64, i) + 1; // <-- type of array index is `usize`
             term.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
-       title2("pointer to array");
+        title2("pointer to array");
         const ptr = &array; // pointer to an array
         for (ptr) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
@@ -224,8 +226,8 @@ pub fn main() !void {
         }
 
         title2("mem.set");
-        mem.set(i64, &array, 0);
-        //  ^^^^^^^^^^^^^^^^^^^ --> set every elements in array to 0
+        mem.set(@TypeOf(array[0]), &array, 0);
+        //  ^^^ --> set every elements in array to 0
         for (array) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
@@ -238,7 +240,7 @@ pub fn main() !void {
         }
     }
     {
-        title2("array (heap allocated)");
+        title2("heap allocated array");
         term.print(">> array length: ");
         var arrayLength: usize = undefined;
         while (true) {
