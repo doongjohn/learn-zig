@@ -125,17 +125,16 @@ pub fn main() !void {
         }
         term.println("");
     }
-
     title2("for loop");
     {
         const string = "Hello world!";
 
-        for (string) |character, index| {
-            term.printf("string[{d}]: {c}\n", .{ index, character });
+        for (string) |byte, index| {
+            term.printf("string[{d}]: {c}\n", .{ index, byte });
         }
 
-        for (string) |character| {
-            term.printf("{c} ", .{character});
+        for (string) |byte| {
+            term.printf("{c} ", .{byte});
         }
         term.println("");
 
