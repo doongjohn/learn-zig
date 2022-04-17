@@ -72,6 +72,7 @@ pub fn title2(comptime text: []const u8) void {
 }
 
 pub fn main() !void {
+    // var n = 0b0000_0_0_00;
     // init terminal io
     term.init();
 
@@ -79,17 +80,6 @@ pub fn main() !void {
     var gpallocator = std.heap.GeneralPurposeAllocator(.{}){};
     const galloc = gpallocator.allocator();
     defer _ = gpallocator.deinit();
-
-    // init random number generator
-    const rngSeed = @intCast(u64, std.time.timestamp());
-    const rng = std.rand.DefaultPrng.init(rngSeed).random();
-
-    title("variable");
-    {
-        var n: u8 = 0b0000_0_1_01;
-        //          ^^^^^^^^^^^^^ --> for number literals _ can be used for readability
-        term.printf("{d}\n", .{n});
-    }
 
     title("block");
     {
@@ -310,7 +300,7 @@ pub fn main() !void {
             text: []const u8, // no default value
         };
 
-        var someStruct = SomeStruct{ .text = "" }; // initalize struct by `StructName{}`
+        var someStruct = SomeStruct{ .text = "" };
         //                           ^^^^^^^^^^
         //                           └-> this is necessary because `text` has no default value
         someStruct.num = 10;
@@ -328,13 +318,17 @@ pub fn main() !void {
 
     title("error");
     {
+        // init random number generator
+        const rngSeed = @intCast(u64, std.time.timestamp());
+        const rng = std.rand.DefaultPrng.init(rngSeed).random();
+
         // TODO: learn more about errors
         title2("with error");
-        _ = returnErrorFunc(true) catch |err| {
+        _ = returnError(rng) catch |err| {
             term.printf("{s}\n", .{err});
         };
         title2("without error");
-        _ = returnErrorFunc(false) catch |err| {
+        _ = returnNoError(rng) catch |err| {
             term.printf("{s}\n", .{err});
         };
     }
@@ -350,19 +344,25 @@ fn ReturnStruct() type {
     };
 }
 
-fn returnErrorAux(returnError: bool) !i64 {
+fn compareRandom(rng: std.rand.Random, comp: i64) !i64 {
     const Error = error{TestError};
-    if (returnError) {
-        return Error.TestError;
+    var randomNum = rng.intRangeAtMost(i64, 1, 2);
+    if (randomNum < comp) {
+        return randomNum;
     } else {
-        return 100;
+        return Error.TestError;
     }
 }
-fn returnErrorFunc(returnError: bool) !i64 {
+fn returnError(rng: std.rand.Random) !i64 {
     errdefer term.println("errdefer");
-    var num = try returnErrorAux(returnError);
+    var num = try compareRandom(rng, 0);
     //        ^^^ -> `try` is equal to `someFunc() catch |err| return err;`
     //               so if it returns an error,
     //               code below here will not be executed
+    return num;
+}
+fn returnNoError(rng: std.rand.Random) !i64 {
+    errdefer term.println("errdefer");
+    var num = try compareRandom(rng, 3);
     return num;
 }
