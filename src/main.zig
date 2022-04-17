@@ -320,7 +320,13 @@ pub fn main() !void {
 
     title("error");
     {
-        errTest() catch |err| {
+        // TODO: learn more about errors
+        title2("with error");
+        _ = returnError(rng) catch |err| {
+            term.printf("{s}\n", .{err});
+        };
+        title2("without error");
+        _ = returnNoError(rng) catch |err| {
             term.printf("{s}\n", .{err});
         };
     }
@@ -336,15 +342,22 @@ fn ReturnStruct() type {
     };
 }
 
-fn errFn() !void {
+fn compareRandom(rng: std.rand.Random, comp: i64) !i64 {
     const Error = error{TestError};
-    return Error.TestError;
+    var randomNum = rng.intRangeAtMost(i64, 1, 2);
+    if (randomNum < comp) {
+        return randomNum;
+    } else {
+        return Error.TestError;
+    }
 }
-
-fn errTest() !void {
-    defer term.println("defer: before error");
-    errdefer term.println("errdefer: before error");
-    try errFn();
-    defer term.println("defer: after error");
-    errdefer term.println("errdefer: after error");
+fn returnError(rng: std.rand.Random) !i64 {
+    var num = try compareRandom(rng, 0);
+    errdefer term.println("errdefer");
+    return num;
+}
+fn returnNoError(rng: std.rand.Random) !i64 {
+    var num = try compareRandom(rng, 3);
+    errdefer term.println("errdefer");
+    return num;
 }
