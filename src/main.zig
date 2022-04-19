@@ -15,6 +15,10 @@ pub fn Term() type {
         var inputBuf: [maxInput]u8 = undefined;
         var inputBufUtf16: [maxInput]u16 = undefined;
 
+        // windows console api
+        extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) bool;
+        extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) bool;
+
         pub fn init() void {
             stdout = std.io.getStdOut().writer();
             stdin = std.io.getStdIn().reader();
@@ -38,10 +42,6 @@ pub fn Term() type {
         pub fn readByte() u8 {
             return stdin.readByte() catch unreachable;
         }
-
-        // windows console api
-        extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) bool;
-        extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) bool;
 
         /// INFO: this function uses global buffer for the input!
         /// please copy the result if you want to keep the result
