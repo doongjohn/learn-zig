@@ -76,13 +76,13 @@ pub fn main() !void {
     term.init();
 
     // init general purpose allocator
-    var gpallocator = std.heap.GeneralPurposeAllocator(.{}){};
-    const galloc = gpallocator.allocator();
-    defer _ = gpallocator.deinit();
+    var gallocator = std.heap.GeneralPurposeAllocator(.{}){};
+    const galloc = gallocator.allocator();
+    defer _ = gallocator.deinit();
 
     // init random number generator
-    const rngSeed = @intCast(u64, std.time.timestamp());
-    const rng = std.rand.DefaultPrng.init(rngSeed).random();
+    const rng_seed = @intCast(u64, std.time.timestamp());
+    const rng = std.rand.DefaultPrng.init(rng_seed).random();
 
     title("variable");
     {
@@ -176,13 +176,13 @@ pub fn main() !void {
     }
     {
         title2("heap allocation");
-        const heapInt = try galloc.create(i32);
-        //                         ^^^^^^^^^^^ --> allocates a single item
-        defer galloc.destroy(heapInt);
-        //           ^^^^^^^^^^^^^^^^ --> deallocates a single item
+        const heap_int = try galloc.create(i32);
+        //                          ^^^^^^ --> allocates a single item
+        defer galloc.destroy(heap_int);
+        //           ^^^^^^^ --> deallocates a single item
 
-        heapInt.* = 100;
-        term.printf("num: {d}\n", .{heapInt.*});
+        heap_int.* = 100;
+        term.printf("num: {d}\n", .{heap_int.*});
     }
     {
         title2("optional pointer");
@@ -197,8 +197,8 @@ pub fn main() !void {
         term.printf("optional pointer value: {d}\n", .{ptr.?.*});
 
         if (ptr) |value| {
-        //       ^^^^^^^ --> this unwraps ptr and the captured value is
-        //                   only available in this block
+            //   ^^^^^^^ --> this unwraps ptr and the captured value is
+            //                   only available in this block
             value.* = 10;
             term.printf("optional pointer value: {d}\n", .{value.*});
         } else {
@@ -250,18 +250,18 @@ pub fn main() !void {
     {
         title2("heap allocated array");
         term.print(">> array length: ");
-        var arrayLength: usize = undefined;
+        var array_length: usize = undefined;
         while (true) {
             const input = try term.readLine();
             // handle error
-            arrayLength = std.fmt.parseInt(usize, input, 10) catch {
+            array_length = std.fmt.parseInt(usize, input, 10) catch {
                 term.print(">> please input positive number: ");
                 continue;
             };
             break;
         }
 
-        const array = try galloc.alloc(i64, arrayLength);
+        const array = try galloc.alloc(i64, array_length);
         //                       ^^^^^ --> allocate array
         defer galloc.free(array);
         //           ^^^^ --> deallocate array
@@ -310,13 +310,13 @@ pub fn main() !void {
             text: []const u8, // no default value
         };
 
-        var someStruct = SomeStruct{ .text = "" }; // initalize struct by `StructName{}`
+        var some_struct = SomeStruct{ .text = "" }; // initalize struct by `StructName{}`
         //                           ^^^^^^^^^^
         //                           └-> this is necessary because `text` has no default value
-        someStruct.num = 10;
-        someStruct.text = "hello";
-        term.printf("num: {d}\n", .{someStruct.num});
-        term.printf("text: {s}\n", .{someStruct.text});
+        some_struct.num = 10;
+        some_struct.text = "hello";
+        term.printf("num: {d}\n", .{some_struct.num});
+        term.printf("text: {s}\n", .{some_struct.text});
 
         var astruct: ReturnStruct() = undefined;
         //           ^^^^^^^^^^^^^^
@@ -350,17 +350,17 @@ fn ReturnStruct() type {
     };
 }
 
-fn returnErrorAux(returnError: bool) !i64 {
+fn returnErrorAux(return_error: bool) !i64 {
     const Error = error{TestError};
-    if (returnError) {
+    if (return_error) {
         return Error.TestError;
     } else {
         return 100;
     }
 }
-fn returnErrorFunc(returnError: bool) !i64 {
+fn returnErrorFunc(return_error: bool) !i64 {
     errdefer term.println("errdefer");
-    var num = try returnErrorAux(returnError);
+    var num = try returnErrorAux(return_error);
     //        ^^^ -> `try` is equal to `someFunc() catch |err| return err;`
     //               so if it returns an error,
     //               code below here will not be executed
