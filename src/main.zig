@@ -9,20 +9,16 @@ pub fn Term() type {
     return struct {
         var stdout: std.fs.File.Writer = undefined;
         var stdin: std.fs.File.Reader = undefined;
-        var stdinHandle: os.fd_t = undefined;
+        var stdin_handle: os.fd_t = undefined;
 
-        const maxInput = 32768;
-        var inputBuf: [maxInput]u8 = undefined;
-        var inputBufUtf16: [maxInput]u16 = undefined;
-
-        // windows console api
+        // windows console api (easy c interop!)
         extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) bool;
         extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) bool;
 
         pub fn init() void {
             stdout = std.io.getStdOut().writer();
             stdin = std.io.getStdIn().reader();
-            stdinHandle = std.io.getStdIn().handle;
+            stdin_handle = std.io.getStdIn().handle;
             if (comptime builtin.os.tag == .windows) {
                 _ = SetConsoleOutputCP(65001);
             }
@@ -43,16 +39,20 @@ pub fn Term() type {
             return stdin.readByte() catch unreachable;
         }
 
+        const input_max = 32768;
+        var input_buf: [input_max]u8 = undefined;
+        var input_buf_utf16: [input_max]u16 = undefined;
+
         /// INFO: this function uses global buffer for the input!
         /// please copy the result if you want to keep the result
         pub fn readLine() ![]const u8 {
             if (comptime builtin.os.tag == .windows) {
                 var readCount: u32 = undefined;
-                _ = ReadConsoleW(stdinHandle, &inputBufUtf16, maxInput, &readCount, null);
-                const len = try std.unicode.utf16leToUtf8(inputBuf[0..], inputBufUtf16[0..readCount]);
-                return mem.trimRight(u8, inputBuf[0..len], "\r\n"); // trim windows newline
+                _ = ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null);
+                const len = try std.unicode.utf16leToUtf8(input_buf[0..], input_buf_utf16[0..readCount]);
+                return mem.trimRight(u8, input_buf[0..len], "\r\n"); // trim windows newline
             } else {
-                return try stdin.readUntilDelimiter(inputBuf[0..], '\n');
+                return try stdin.readUntilDelimiter(input_buf[0..], '\n');
                 //               ^^^^^^^^^^^^^^^^^^
                 //               └> NOTE: Can't read Unicode from Windows console!
             }
@@ -63,48 +63,52 @@ pub fn Term() type {
 const term = Term();
 
 pub fn title(comptime text: []const u8) void {
-    const concated = "\n[" ++ text ++ "]\n";
-    const line = "-" ** (concated.len - 2);
-    term.println("\n" ++ line ++ concated ++ line);
+    const str = "\n< " ++ text ++ " >\n";
+    const line = "-" ** (str.len - 2);
+    term.println("\n" ++ line ++ str ++ line);
 }
 pub fn title2(comptime text: []const u8) void {
-    term.println("\n[" ++ text ++ "]");
+    term.println("\n< " ++ text ++ " >");
 }
 
 pub fn main() !void {
+    // init general purpose allocator
+    var gpallocator = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpallocator.deinit();
+    const galloc = gpallocator.allocator();
+
     // init terminal io
     term.init();
 
-    // init general purpose allocator
-    var gallocator = std.heap.GeneralPurposeAllocator(.{}){};
-    const galloc = gallocator.allocator();
-    defer _ = gallocator.deinit();
-
     // init random number generator
-    const rng_seed = @intCast(u64, std.time.timestamp());
-    const rng = std.rand.DefaultPrng.init(rng_seed).random();
+    // const rng_seed = @intCast(u64, std.time.timestamp());
+    // const rng = std.rand.DefaultPrng.init(rng_seed).random();
 
     title("variable");
     {
         var n: u8 = 0b0000_0_1_01;
-        //          ^^^^^^^^^^^^^ --> for number literals _ can be used for readability
+        //          ^^^^^^^^^^^^^ --> for number literals _ can be used anywhere for readability
         term.printf("{d}\n", .{n});
+
+        const imm = 10;
+        // imm = 100; // <-- error immutable variable
+        term.printf("{d}\n", .{imm});
     }
 
     title("block");
     {
-        // block can return a value
-        var someText = blk: {
+        // block is an expression (can return a value)
+        var some_text = blk: {
             //         ^^^^ --> this is a name of a block
             if (true) {
                 break :blk "wow";
-                //    ^^^^^^^^^^ -->break out of `blk` and return "wow"
-                //                  https://ziglang.org/documentation/master/#blocks
+                //    ^^^^^^^^^^ --> break out of `blk` and return "wow"
+                //                   https://ziglang.org/documentation/master/#blocks
             } else {
                 break :blk "hello";
             }
         };
-        term.println(someText);
+        term.println(some_text);
     }
 
     title("loop");
@@ -157,12 +161,12 @@ pub fn main() !void {
         var num: i32 = 10;
         term.printf("num: {d}\n", .{num});
 
-        var numPtr: *i32 = undefined;
-        //          ^^^^ --> pointer type
-        numPtr = &num;
-        //       ^^^^ --> pointer of variable num (just like c)
-        numPtr.* += 5;
-        //    ^^ --> dereference pointer
+        var num_ptr: *i32 = undefined;
+        //           ^^^^ --> pointer type
+        num_ptr = &num;
+        //        ^^^^ --> pointer of variable num (just like c)
+        num_ptr.* += 5;
+        //     ^^ --> dereference pointer
 
         term.printf("num: {d}\n", .{num});
     }
@@ -219,17 +223,35 @@ pub fn main() !void {
             term.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
-        title2("pointer to array");
-        const ptr = &array; // pointer to an array
-        for (ptr) |item, i| {
-            term.printf("[{d}]: {d}\n", .{ i, item });
-        }
+        title2("init array pattern with ** operator");
+        const array2 = [_]i64{ 1, 2 } ** 3;
+        //                   ^^^^^^^^^^^^^ --> this will result: { 1, 2, 1, 2, 1, 2 }
+        term.printf("{any}\n", .{array2});
+
+        title2("array assign");
+        // array gets copied when assigned
+        var arr1 = [_]i32{0, 0, 0};
+        var arr2 = arr1;
+        term.printf("arr1: {p}\n", .{&arr1[0]});
+        term.printf("arr2: {p}\n", .{&arr2[0]});
 
         title2("slice");
-        const slice = array[0..]; // a slice is a pointer and a length (its length is known at runtime)
-        //                  ^^^
-        //                  └> from index 0 to the end
+        const arr1_slice = arr1[0..]; // a slice is a pointer and a length (its length is known at runtime)
+        //                      ^^^
+        //                      └> from index 0 to the end
+        term.printf("arr1: {p}\n", .{&arr1[0]});
+        term.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
+        arr1_slice[0] = 10;
         for (slice) |item, i| {
+            term.printf("[{d}]: {d}\n", .{ i, item });
+        }
+        term.printf("arr[0]: {d}\n", .{&arr1[0]});
+
+        title2("pointer to array");
+        const ptr = &array; // pointer to an array
+        term.printf("{s}\n", .{@typeName(@TypeOf(array))});
+        term.printf("{s}\n", .{@typeName(@TypeOf(ptr))});
+        for (ptr) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
 
@@ -239,13 +261,29 @@ pub fn main() !void {
         for (array) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
+    }
+    {
+        title2("strings");
 
-        title2("init array pattern with ** operator");
-        const array2 = [_]i64{ 1, 2 } ** 3;
-        //                   ^^^^^^^^^^^^^ --> this will result: { 1, 2, 1, 2, 1, 2 }
-        for (array2) |item, i| {
-            term.printf("[{d}]: {d}\n", .{ i, item });
-        }
+        // strings are just u8 array
+        var yay = [_]u8{ 'y', 'a', 'y' };
+        yay[0] = 'Y';
+        term.println(yay[0..]);
+
+        // string literals are const slice to u8 array
+        // read more: https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
+        // read more: https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
+        var str_lit = "haha";
+        term.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
+        // (&str_lit[0]).* = 'A'; // <-- this is compile error because it's const slice
+        //                               very nice!
+
+        // multiline string
+        const msg =
+            \\Hello, world!
+            \\Zig is awesome!
+            ++ "\n";
+        term.print(msg);
     }
     {
         title2("heap allocated array");
@@ -265,12 +303,26 @@ pub fn main() !void {
         //                       ^^^^^ --> allocate array
         defer galloc.free(array);
         //           ^^^^ --> deallocate array
-
-        title2("apply random values to the array elements");
         for (array) |*item, i| {
-            item.* = rng.intRangeAtMost(i64, 1, 10); // generate random value
-            term.printf("[{d}]: {d}\n", .{ i, item.* });
+            item.* = @intCast(i64, i); // generate random value
         }
+        term.printf("{any}\n", .{array});
+
+        title2("std.ArrayList");
+        // string builder like function with ArrayList
+        var str_builder = std.ArrayList(u8).init(galloc);
+        defer _ = str_builder.deinit();
+        try str_builder.appendSlice("wow ");
+        try str_builder.appendSlice("this is cool! ");
+        try str_builder.appendSlice("super power!");
+        term.printf("{s}\n", .{str_builder.items});
+
+        // TODO: move this part to the random section
+        // title2("apply random values to the array elements");
+        // for (array) |*item| {
+        //     item.* = rng.intRangeAtMost(i64, 1, 10); // generate random value
+        // }
+        // term.printf("{any}\n", .{array});
     }
     {
         title2("concat array compiletime");
@@ -293,10 +345,11 @@ pub fn main() !void {
         const trimmed = mem.trim(u8, input, "\r\n ");
         //                                   ^^ --> including '\r' is important in windows!
         //                                          https://github.com/ziglang/zig/issues/6754
+        term.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
+
+        // concat string
         const concated = try mem.concat(galloc, u8, &[_][]const u8{ input, "!!!" });
         defer galloc.free(concated);
-
-        term.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
         term.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
     }
 
