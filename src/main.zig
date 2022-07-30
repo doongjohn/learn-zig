@@ -242,7 +242,7 @@ pub fn main() !void {
         term.printf("arr1: {p}\n", .{&arr1[0]});
         term.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
         arr1_slice[0] = 10;
-        for (slice) |item, i| {
+        for (arr1_slice) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
         term.printf("arr[0]: {d}\n", .{&arr1[0]});
@@ -384,11 +384,11 @@ pub fn main() !void {
         // TODO: learn more about errors
         title2("with error");
         _ = returnErrorFunc(true) catch |err| {
-            term.printf("{s}\n", .{err});
+            term.printf("{!}\n", .{err});
         };
         title2("without error");
         _ = returnErrorFunc(false) catch |err| {
-            term.printf("{s}\n", .{err});
+            term.printf("{!}\n", .{err});
         };
     }
 
