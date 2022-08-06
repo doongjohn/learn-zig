@@ -4,6 +4,7 @@ const builtin = @import("builtin");
 const std = @import("std");
 const mem = std.mem;
 const os = std.os;
+const native_arch = builtin.cpu.arch;
 
 pub fn Term() type {
     return struct {
@@ -12,8 +13,9 @@ pub fn Term() type {
         var stdin_handle: os.fd_t = undefined;
 
         // windows console api (easy c interop!)
-        extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) bool;
-        extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) bool;
+        const WINAPI: std.builtin.CallingConvention = if (native_arch == .i386) .Stdcall else .C;
+        extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
+        extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 
         pub fn init() void {
             stdout = std.io.getStdOut().writer();
