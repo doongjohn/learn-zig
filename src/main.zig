@@ -50,6 +50,8 @@ pub fn Term() type {
                 var readCount: u32 = undefined;
                 _ = ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null);
                 const len = try std.unicode.utf16leToUtf8(input_buf[0..], input_buf_utf16[0..readCount]);
+                //                          ^^^^^^^^^^^^^
+                //                          └> windows uses utf16 internally so I need to convert it to utf8
                 return mem.trimRight(u8, input_buf[0..len], "\r\n"); // trim windows newline
             } else {
                 return try stdin.readUntilDelimiter(input_buf[0..], '\n');
@@ -62,12 +64,12 @@ pub fn Term() type {
 
 const term = Term();
 
-pub fn title(comptime text: []const u8) void {
+pub fn h1(comptime text: []const u8) void {
     const str = "\n< " ++ text ++ " >\n";
     const line = "-" ** (str.len - 2);
     term.println("\n" ++ line ++ str ++ line);
 }
-pub fn title2(comptime text: []const u8) void {
+pub fn h2(comptime text: []const u8) void {
     term.println("\n< " ++ text ++ " >");
 }
 
@@ -84,22 +86,23 @@ pub fn main() !void {
     // const rng_seed = @intCast(u64, std.time.timestamp());
     // const rng = std.rand.DefaultPrng.init(rng_seed).random();
 
-    title("variable");
+    h1("variable");
     {
         var n: u8 = 0b0000_0_1_01;
-        //          ^^^^^^^^^^^^^ --> for number literals _ can be used anywhere for readability
+        //          ^^^^^^^^^^^^^ --> "_" can be used anywhere in the number literals
+        //                            for better readability
         term.printf("{d}\n", .{n});
 
         const imm = 10;
-        // imm = 100; // <-- error immutable variable
+        // imm = 100; // <-- error: cannot assign to constant
         term.printf("{d}\n", .{imm});
     }
 
-    title("block");
+    h1("block");
     {
         // block is an expression (can return a value)
         var some_text = blk: {
-            //         ^^^^ --> this is a name of a block
+            //          ^^^ --> this is a name of this block
             if (true) {
                 break :blk "wow";
                 //    ^^^^^^^^^^ --> break out of `blk` and return "wow"
@@ -111,10 +114,12 @@ pub fn main() !void {
         term.println(some_text);
     }
 
-    title("loop");
+    h1("loop");
     {
-        title2("while loop");
+        h2("while loop");
         var i: i64 = 0;
+
+        i = 0;
         while (i < 5) {
             defer i += 1;
             term.printf("{d} ", .{i});
@@ -137,27 +142,53 @@ pub fn main() !void {
         term.println("");
     }
     {
-        title2("for loop");
+        h2("for loop");
         const string = "Hello world!";
-
-        for (string) |byte, index| {
-            term.printf("string[{d}]: {c}\n", .{ index, byte });
-        }
 
         for (string) |byte| {
             term.printf("{c} ", .{byte});
         }
         term.println("");
 
+        for (string) |byte, index| {
+            term.printf("string[{d}]: {c}\n", .{ index, byte });
+        }
+
         for (string) |_, index| {
             term.printf("{d} ", .{index});
         }
         term.println("");
     }
-
-    title("pointer");
     {
-        title2("basic pointer");
+        h2("for else");
+
+        const string1 = "hello world";
+        term.printf("find w in {s}\n", .{string1});
+        const w1 = for (string1) |byte| {
+            if (byte == 'w') {
+                break byte;
+            }
+        } else blk: {
+            break :blk 'x';
+        };
+        term.printf("found: {c}\n", .{w1});
+
+        const string2 = "hello";
+        term.printf("find w in {s}\n", .{string2});
+        term.println("if not found return \'x\'");
+        const w2 = for (string2) |byte| {
+            if (byte == 'w') {
+                break byte;
+            }
+        } else blk: {
+            break :blk 'x';
+        };
+        term.printf("found: {c}\n", .{w2});
+    }
+
+    h1("pointer");
+    {
+        h2("basic pointer");
         var num: i32 = 10;
         term.printf("num: {d}\n", .{num});
 
@@ -171,7 +202,7 @@ pub fn main() !void {
         term.printf("num: {d}\n", .{num});
     }
     {
-        title2("immutable dereference");
+        h2("immutable dereference");
         var num: i32 = 20;
         var ptr: *const i32 = &num;
         //       ^^^^^^ --> immutable dereference
@@ -179,7 +210,7 @@ pub fn main() !void {
         term.printf("num: {d}\n", .{ptr.*});
     }
     {
-        title2("heap allocation");
+        h2("heap allocation");
         const heap_int = try galloc.create(i32);
         //                          ^^^^^^ --> allocates a single item
         defer galloc.destroy(heap_int);
@@ -189,7 +220,7 @@ pub fn main() !void {
         term.printf("num: {d}\n", .{heap_int.*});
     }
     {
-        title2("optional pointer");
+        h2("optional pointer");
         var ptr: ?*i32 = null;
         //       ^ --> optional type (null is allowed)
         //             it is zero cost for the pointer
@@ -202,7 +233,7 @@ pub fn main() !void {
 
         if (ptr) |value| {
             //   ^^^^^^^ --> this unwraps ptr and the captured value is
-            //                   only available in this block
+            //               only available in this block
             value.* = 10;
             term.printf("optional pointer value: {d}\n", .{value.*});
         } else {
@@ -210,9 +241,9 @@ pub fn main() !void {
         }
     }
 
-    title("array");
+    h1("array");
     {
-        title2("basic array");
+        h2("basic array");
         var array = [_]i64{ 1, 10, 100 }; // this array is mutable because it is declared as `var`
         //          ^^^ --> same as [3]i64 because it has 3 items (zig can infer the length)
         for (array) |*item, i| {
@@ -223,19 +254,19 @@ pub fn main() !void {
             term.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
-        title2("init array pattern with ** operator");
+        h2("init array pattern with ** operator");
         const array2 = [_]i64{ 1, 2 } ** 3;
         //                   ^^^^^^^^^^^^^ --> this will result: { 1, 2, 1, 2, 1, 2 }
         term.printf("{any}\n", .{array2});
 
-        title2("array assign");
+        h2("array assign");
         // array gets copied when assigned
-        var arr1 = [_]i32{0, 0, 0};
+        var arr1 = [_]i32{ 0, 0, 0 };
         var arr2 = arr1;
         term.printf("arr1: {p}\n", .{&arr1[0]});
         term.printf("arr2: {p}\n", .{&arr2[0]});
 
-        title2("slice");
+        h2("slice");
         const arr1_slice = arr1[0..]; // a slice is a pointer and a length (its length is known at runtime)
         //                      ^^^
         //                      └> from index 0 to the end
@@ -247,7 +278,7 @@ pub fn main() !void {
         }
         term.printf("arr[0]: {d}\n", .{&arr1[0]});
 
-        title2("pointer to array");
+        h2("pointer to array");
         const ptr = &array; // pointer to an array
         term.printf("{s}\n", .{@typeName(@TypeOf(array))});
         term.printf("{s}\n", .{@typeName(@TypeOf(ptr))});
@@ -255,7 +286,7 @@ pub fn main() !void {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
 
-        title2("mem.set");
+        h2("mem.set");
         mem.set(@TypeOf(array[0]), &array, 0);
         //  ^^^ --> set every elements in array to 0
         for (array) |item, i| {
@@ -263,7 +294,7 @@ pub fn main() !void {
         }
     }
     {
-        title2("strings");
+        h2("strings");
 
         // strings are just u8 array
         var yay = [_]u8{ 'y', 'a', 'y' };
@@ -282,11 +313,11 @@ pub fn main() !void {
         const msg =
             \\Hello, world!
             \\Zig is awesome!
-            ++ "\n";
+        ++ "\n";
         term.print(msg);
     }
     {
-        title2("heap allocated array");
+        h2("heap allocated array");
         term.print(">> array length: ");
         var array_length: usize = undefined;
         while (true) {
@@ -308,7 +339,7 @@ pub fn main() !void {
         }
         term.printf("{any}\n", .{array});
 
-        title2("std.ArrayList");
+        h2("std.ArrayList");
         // string builder like function with ArrayList
         var str_builder = std.ArrayList(u8).init(galloc);
         defer _ = str_builder.deinit();
@@ -318,27 +349,27 @@ pub fn main() !void {
         term.printf("{s}\n", .{str_builder.items});
 
         // TODO: move this part to the random section
-        // title2("apply random values to the array elements");
+        // h2("apply random values to the array elements");
         // for (array) |*item| {
         //     item.* = rng.intRangeAtMost(i64, 1, 10); // generate random value
         // }
         // term.printf("{any}\n", .{array});
     }
     {
-        title2("concat array compiletime");
+        h2("concat array compiletime");
         const concated = "wow " ++ "hey " ++ "yay";
         //                      ^^ --> compiletime array concatenation operator
         term.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
     {
-        title2("concat array runtime");
+        h2("concat array runtime");
         const words = [_][]const u8{ "wow ", "hey ", "yay" };
         const concated = try mem.concat(galloc, u8, words[0..]);
         defer galloc.free(concated);
         term.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
 
-    title("terminal io");
+    h1("terminal io");
     {
         term.print(">> terminal input: ");
         const input = try term.readLine();
@@ -353,7 +384,7 @@ pub fn main() !void {
         term.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
     }
 
-    title("struct");
+    h1("struct");
     {
         // all structs are anonymous
         // see: https://ziglang.org/documentation/master/#Struct-Naming
@@ -379,14 +410,14 @@ pub fn main() !void {
         term.printf("b: {d}\n", .{astruct.b});
     }
 
-    title("error");
+    h1("error");
     {
         // TODO: learn more about errors
-        title2("with error");
+        h2("with error");
         _ = returnErrorFunc(true) catch |err| {
             term.printf("{!}\n", .{err});
         };
-        title2("without error");
+        h2("without error");
         _ = returnErrorFunc(false) catch |err| {
             term.printf("{!}\n", .{err});
         };
