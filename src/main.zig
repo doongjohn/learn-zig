@@ -81,6 +81,10 @@ pub fn main() !void {
     defer _ = gpallocator.deinit();
     const galloc = gpallocator.allocator();
 
+    // use c allocator for valgrind
+    // var gpallocator = std.heap.c_allocator;
+    // const galloc = gpallocator;
+
     // init terminal io
     term.init();
 
@@ -147,19 +151,22 @@ pub fn main() !void {
         h2("for loop");
         const string = "Hello world!";
 
+        // get element
         for (string) |byte| {
             term.printf("{c} ", .{byte});
         }
         term.println("");
 
-        for (string) |byte, index| {
-            term.printf("string[{d}]: {c}\n", .{ index, byte });
-        }
-
+        // get index
         for (string) |_, index| {
             term.printf("{d} ", .{index});
         }
         term.println("");
+
+        // get element and index
+        for (string) |byte, index| {
+            term.printf("string[{d}]: {c}\n", .{ index, byte });
+        }
     }
     {
         h2("for else");
@@ -171,6 +178,7 @@ pub fn main() !void {
                 break byte;
             }
         } else blk: {
+            // this runs when a for loop didn't break
             break :blk 'x';
         };
         term.printf("found: {c}\n", .{w1});
@@ -183,6 +191,7 @@ pub fn main() !void {
                 break byte;
             }
         } else blk: {
+            // this runs when a for loop didn't break
             break :blk 'x';
         };
         term.printf("found: {c}\n", .{w2});
@@ -222,7 +231,7 @@ pub fn main() !void {
         term.printf("num: {d}\n", .{heap_int.*});
     }
     {
-        h2("optional pointer");
+        h2("optional(nullable) pointer");
         var ptr: ?*i32 = null;
         //       ^ --> optional type (null is allowed)
         //             it is zero cost for the pointer
@@ -257,8 +266,9 @@ pub fn main() !void {
         }
 
         h2("init array pattern with ** operator");
-        const array2 = [_]i64{ 1, 2 } ** 3;
-        //                   ^^^^^^^^^^^^^ --> this will result: { 1, 2, 1, 2, 1, 2 }
+        const array2 = [_]i64{ 1, 2, 3 } ** 3;
+        //                   ^^^^^^^^^^^^^ --> this will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 }
+        //                                     at compile time
         term.printf("{any}\n", .{array2});
 
         h2("array assign");
@@ -289,8 +299,8 @@ pub fn main() !void {
         }
 
         h2("mem.set");
-        mem.set(@TypeOf(array[0]), &array, 0);
-        //  ^^^ --> set every elements in array to 0
+        mem.set(@TypeOf(array[0]), &array, 3);
+        //  ^^^ --> set every elements in array to 3
         for (array) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
