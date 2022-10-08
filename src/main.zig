@@ -1,70 +1,65 @@
-// Learning Zig!
-
 const builtin = @import("builtin");
+const native_arch = builtin.cpu.arch;
+
 const std = @import("std");
 const mem = std.mem;
 const os = std.os;
-const native_arch = builtin.cpu.arch;
 
-pub fn Term() type {
-    return struct {
-        var stdout: std.fs.File.Writer = undefined;
-        var stdin: std.fs.File.Reader = undefined;
-        var stdin_handle: os.fd_t = undefined;
+const term = struct {
+    var stdout: std.fs.File.Writer = undefined;
+    var stdin: std.fs.File.Reader = undefined;
+    var stdin_handle: os.fd_t = undefined;
 
-        // windows console api (easy c interop!)
-        const WINAPI: std.builtin.CallingConvention = if (native_arch == .i386) .Stdcall else .C;
-        extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
-        extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
+    // windows console api (easy c interop!)
+    const WINAPI: std.builtin.CallingConvention = if (native_arch == .i386) .Stdcall else .C;
+    extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
+    extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 
-        pub fn init() void {
-            stdout = std.io.getStdOut().writer();
-            stdin = std.io.getStdIn().reader();
-            stdin_handle = std.io.getStdIn().handle;
-            if (comptime builtin.os.tag == .windows) {
-                _ = SetConsoleOutputCP(65001);
-            }
+    pub fn init() void {
+        stdout = std.io.getStdOut().writer();
+        stdin = std.io.getStdIn().reader();
+        stdin_handle = std.io.getStdIn().handle;
+        if (comptime builtin.os.tag == .windows) {
+            _ = SetConsoleOutputCP(65001);
         }
+    }
 
-        pub fn print(str: []const u8) void {
-            _ = stdout.write(str) catch unreachable;
-        }
-        pub fn println(str: []const u8) void {
-            _ = stdout.write(str) catch unreachable;
-            _ = stdout.write("\n") catch unreachable;
-        }
-        pub fn printf(comptime format: []const u8, args: anytype) void {
-            stdout.print(format, args) catch unreachable;
-        }
+    pub fn print(str: []const u8) void {
+        _ = stdout.write(str) catch unreachable;
+    }
+    pub fn println(str: []const u8) void {
+        _ = stdout.write(str) catch unreachable;
+        _ = stdout.write("\n") catch unreachable;
+    }
+    pub fn printf(comptime format: []const u8, args: anytype) void {
+        stdout.print(format, args) catch unreachable;
+    }
 
-        pub fn readByte() u8 {
-            return stdin.readByte() catch unreachable;
+    pub fn readByte() u8 {
+        return stdin.readByte() catch unreachable;
+    }
+
+    const input_max = 32768;
+    var input_buf: [input_max]u8 = undefined;
+    var input_buf_utf16: [input_max]u16 = undefined;
+
+    /// INFO: this function uses global buffer for the input!
+    /// please copy the result if you want to keep the result
+    pub fn readLine() ![]const u8 {
+        if (comptime builtin.os.tag == .windows) {
+            var readCount: u32 = undefined;
+            _ = ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null);
+            const len = try std.unicode.utf16leToUtf8(input_buf[0..], input_buf_utf16[0..readCount]);
+            //                          ^^^^^^^^^^^^^
+            //                          └> windows uses utf16 internally so I need to convert it to utf8
+            return mem.trimRight(u8, input_buf[0..len], "\r\n"); // trim windows newline
+        } else {
+            return try stdin.readUntilDelimiter(input_buf[0..], '\n');
+            //               ^^^^^^^^^^^^^^^^^^
+            //               └> NOTE: Can't read Unicode from Windows console!
         }
-
-        const input_max = 32768;
-        var input_buf: [input_max]u8 = undefined;
-        var input_buf_utf16: [input_max]u16 = undefined;
-
-        /// INFO: this function uses global buffer for the input!
-        /// please copy the result if you want to keep the result
-        pub fn readLine() ![]const u8 {
-            if (comptime builtin.os.tag == .windows) {
-                var readCount: u32 = undefined;
-                _ = ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null);
-                const len = try std.unicode.utf16leToUtf8(input_buf[0..], input_buf_utf16[0..readCount]);
-                //                          ^^^^^^^^^^^^^
-                //                          └> windows uses utf16 internally so I need to convert it to utf8
-                return mem.trimRight(u8, input_buf[0..len], "\r\n"); // trim windows newline
-            } else {
-                return try stdin.readUntilDelimiter(input_buf[0..], '\n');
-                //               ^^^^^^^^^^^^^^^^^^
-                //               └> NOTE: Can't read Unicode from Windows console!
-            }
-        }
-    };
-}
-
-const term = Term();
+    }
+};
 
 pub fn h1(comptime text: []const u8) void {
     const str = "\n< " ++ text ++ " >\n";
@@ -279,9 +274,9 @@ pub fn main() !void {
         term.printf("arr2: {p}\n", .{&arr2[0]});
 
         h2("slice");
-        const arr1_slice = arr1[0..]; // a slice is a pointer and a length (its length is known at runtime)
-        //                      ^^^
-        //                      └> from index 0 to the end
+        var arr1_slice = arr1[0..]; // a slice is a pointer and a length (its length is known at runtime)
+        //                    ^^^
+        //                    └> from index 0 to the end
         term.printf("arr1: {p}\n", .{&arr1[0]});
         term.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
         arr1_slice[0] = 10;
@@ -290,11 +285,15 @@ pub fn main() !void {
         }
         term.printf("arr[0]: {d}\n", .{&arr1[0]});
 
+        arr1_slice = &arr1;
+        //           ^^^^^
+        //           └> array pointer can be coerced to slice
+
         h2("pointer to array");
-        const ptr = &array; // pointer to an array
+        const arr_ptr = &array; // pointer to an array
         term.printf("{s}\n", .{@typeName(@TypeOf(array))});
-        term.printf("{s}\n", .{@typeName(@TypeOf(ptr))});
-        for (ptr) |item, i| {
+        term.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
+        for (arr_ptr) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
 
