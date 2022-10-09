@@ -56,7 +56,7 @@ const term = struct {
         } else {
             return try stdin.readUntilDelimiter(input_buf[0..], '\n');
             //               ^^^^^^^^^^^^^^^^^^
-            //               └> NOTE: Can't read Unicode from Windows console!
+            //               └> NOTE: Can't read Unicode from Windows console! (use windows ReadConsoleW)
         }
     }
 };
@@ -76,16 +76,16 @@ pub fn main() !void {
     defer _ = gpallocator.deinit();
     const galloc = gpallocator.allocator();
 
-    // use c allocator for valgrind
+    // // use c allocator for valgrind
     // var gpallocator = std.heap.c_allocator;
     // const galloc = gpallocator;
 
-    // init terminal io
-    term.init();
-
-    // init random number generator
+    // // init random number generator
     // const rng_seed = @intCast(u64, std.time.timestamp());
     // const rng = std.rand.DefaultPrng.init(rng_seed).random();
+
+    // init terminal io
+    term.init();
 
     h1("variable");
     {
@@ -102,14 +102,14 @@ pub fn main() !void {
     h1("block");
     {
         // block is an expression (can return a value)
-        var some_text = blk: {
+        var some_text = block_name: {
             //          ^^^ --> this is a name of this block
             if (true) {
-                break :blk "wow";
-                //    ^^^^^^^^^^ --> break out of `blk` and return "wow"
+                break :block_name "wow";
+                //    ^^^^^^^^^^ --> break out of this block and return "wow"
                 //                   https://ziglang.org/documentation/master/#blocks
             } else {
-                break :blk "hello";
+                break :block_name "hello";
             }
         };
         term.println(some_text);

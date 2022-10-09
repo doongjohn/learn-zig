@@ -12,7 +12,7 @@ pub fn build(b: *std.build.Builder) void {
     const mode = b.standardReleaseOptions();
 
     const exe = b.addExecutable("learn-zig", "src/main.zig");
-    exe.linkLibC();
+    // exe.linkLibC(); // <-- link libc
     exe.setTarget(target);
     exe.setBuildMode(mode);
     exe.install();
