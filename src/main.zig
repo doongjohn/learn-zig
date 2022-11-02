@@ -66,6 +66,7 @@ pub fn h1(comptime text: []const u8) void {
     const line = "-" ** (str.len - 2);
     term.println("\n" ++ line ++ str ++ line);
 }
+
 pub fn h2(comptime text: []const u8) void {
     term.println("\n< " ++ text ++ " >");
 }
@@ -312,7 +313,7 @@ pub fn main() !void {
         yay[0] = 'Y';
         term.println(yay[0..]);
 
-        // string literals are const slice to u8 array
+        // string literals are const slice to null terminated u8 array
         // read more: https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
         // read more: https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
         var str_lit = "haha";
@@ -406,8 +407,8 @@ pub fn main() !void {
         };
 
         var some_struct = SomeStruct{ .text = "" }; // initalize struct by `StructName{}`
-        //                           ^^^^^^^^^^
-        //                           └-> this is necessary because `text` has no default value
+        //                            ^^^^^^^^^^
+        //                            └-> this is necessary because `text` has no default value
         some_struct.num = 10;
         some_struct.text = "hello";
         term.printf("num: {d}\n", .{some_struct.num});
@@ -453,6 +454,7 @@ fn returnErrorAux(return_error: bool) !i64 {
         return 100;
     }
 }
+
 fn returnErrorFunc(return_error: bool) !i64 {
     errdefer term.println("errdefer");
     var num = try returnErrorAux(return_error);
