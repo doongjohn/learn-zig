@@ -10,8 +10,9 @@ const term = struct {
     var stdin: std.fs.File.Reader = undefined;
     var stdin_handle: os.fd_t = undefined;
 
+    // cross compile to windows: zig build -Dtarget=x86_64-windows
     // windows console api (easy c interop!)
-    const WINAPI: std.builtin.CallingConvention = if (native_arch == .i386) .Stdcall else .C;
+    const WINAPI: std.builtin.CallingConvention = if (native_arch == .x86) .Stdcall else .C;
     extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
     extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 
@@ -62,13 +63,11 @@ const term = struct {
 };
 
 pub fn h1(comptime text: []const u8) void {
-    const str = "\n< " ++ text ++ " >\n";
-    const line = "-" ** (str.len - 2);
-    term.println("\n" ++ line ++ str ++ line);
+    term.println("\n\n# " ++ text);
 }
 
 pub fn h2(comptime text: []const u8) void {
-    term.println("\n< " ++ text ++ " >");
+    term.println("\n## " ++ text);
 }
 
 pub fn main() !void {
@@ -420,6 +419,20 @@ pub fn main() !void {
         astruct = ReturnStruct(){};
         term.printf("a: {d}\n", .{astruct.a});
         term.printf("b: {d}\n", .{astruct.b});
+    }
+
+    h1("enum");
+    {
+        const MyEnum = enum(u8) { Hello, Bye, _ };
+        //                                    ^ --> non-exhaustive enum
+
+        var e: MyEnum = .Hello;
+
+        switch (e) {
+            .Hello => term.printf("{}\n", .{e}),
+            .Bye => term.printf("{}\n", .{e}),
+            else => term.println("other"),
+        }
     }
 
     h1("error");
