@@ -50,12 +50,12 @@ const term = struct {
         if (comptime builtin.os.tag == .windows) {
             var readCount: u32 = undefined;
             _ = ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null);
-            const len = try std.unicode.utf16leToUtf8(input_buf[0..], input_buf_utf16[0..readCount]);
+            const len = try std.unicode.utf16leToUtf8(&input_buf, input_buf_utf16[0..readCount]);
             //                          ^^^^^^^^^^^^^
             //                          └> windows uses utf16 internally so I need to convert it to utf8
             return mem.trimRight(u8, input_buf[0..len], "\r\n"); // trim windows newline
         } else {
-            return try stdin.readUntilDelimiter(input_buf[0..], '\n');
+            return try stdin.readUntilDelimiter(&input_buf, '\n');
             //               ^^^^^^^^^^^^^^^^^^
             //               └> NOTE: Can't read Unicode from Windows console! (use windows ReadConsoleW)
         }
@@ -153,13 +153,13 @@ pub fn main() !void {
         term.println("");
 
         // get index
-        for (string) |_, index| {
+        for (string, 0..) |_, index| {
             term.printf("{d} ", .{index});
         }
         term.println("");
 
         // get element and index
-        for (string) |byte, index| {
+        for (string, 0..) |byte, index| {
             term.printf("string[{d}]: {c}\n", .{ index, byte });
         }
     }
@@ -252,10 +252,10 @@ pub fn main() !void {
         h2("basic array");
         var array = [_]i64{ 1, 10, 100 }; // this array is mutable because it is declared as `var`
         //          ^^^ --> same as [3]i64 because it has 3 items (zig can infer the length)
-        for (array) |*item, i| {
-            //       ^^^^^  ^
-            //       |      └> current index
-            //       └> get element as a pointer (so that we can change its value)
+        for (&array, 0..) |*item, i| {
+            //             ^^^^^  ^
+            //             |      └> current index
+            //             └> get element as a pointer (so that we can change its value)
             item.* = @intCast(i64, i) + 1; // <-- type of array index is `usize`
             term.printf("[{d}]: {d}\n", .{ i, item.* });
         }
@@ -280,7 +280,7 @@ pub fn main() !void {
         term.printf("arr1: {p}\n", .{&arr1[0]});
         term.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
         arr1_slice[0] = 10;
-        for (arr1_slice) |item, i| {
+        for (arr1_slice, 0..) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
         term.printf("arr[0]: {d}\n", .{&arr1[0]});
@@ -293,14 +293,14 @@ pub fn main() !void {
         const arr_ptr = &array; // pointer to an array
         term.printf("{s}\n", .{@typeName(@TypeOf(array))});
         term.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
-        for (arr_ptr) |item, i| {
+        for (arr_ptr, 0..) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
 
         h2("mem.set");
         mem.set(@TypeOf(array[0]), &array, 3);
         //  ^^^ --> set every elements in array to 3
-        for (array) |item, i| {
+        for (array, 0..) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
     }
@@ -345,7 +345,7 @@ pub fn main() !void {
         //                       ^^^^^ --> allocate array
         defer galloc.free(array);
         //           ^^^^ --> deallocate array
-        for (array) |*item, i| {
+        for (array, 0..) |*item, i| {
             item.* = @intCast(i64, i); // generate random value
         }
         term.printf("{any}\n", .{array});
