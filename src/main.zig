@@ -162,6 +162,15 @@ pub fn main() !void {
         for (string, 0..) |byte, index| {
             term.printf("string[{d}]: {c}\n", .{ index, byte });
         }
+
+        // multi-object for loop
+        var arr1 = [_]i32{ 1, 2, 3, 4, 5, 6 };
+        var arr2 = [_]i32{ 2, 3, 4, 5, 6, 7, 8 };
+        var arr3 = [_]i32{ 2, 3, 4, 5, 6, 7, 8, 9 };
+
+        for (arr1, arr2[0..6], arr3[0..6]) |item1, item2, item3| {
+            term.printf("arr1: {d}, arr2: {d} arr3: {d}\n", .{ item1, item2, item3 });
+        }
     }
     {
         h2("for else");
