@@ -397,11 +397,13 @@ pub fn main() !void {
         //                                   ^^ --> including '\r' is important in windows!
         //                                          https://github.com/ziglang/zig/issues/6754
         term.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
+        term.printf("unicode len: {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed)});
 
         // concat string
-        const concated = try mem.concat(galloc, u8, &[_][]const u8{ input, "!!!" });
+        const concated = try mem.concat(galloc, u8, &[_][]const u8{ trimmed, "!!!" });
         defer galloc.free(concated);
         term.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
+        term.printf("unicode len: {d}\n", .{try std.unicode.utf8CountCodepoints(concated)});
     }
 
     h1("struct");
@@ -469,9 +471,9 @@ fn ReturnStruct() type {
 }
 
 fn returnErrorAux(return_error: bool) !i64 {
-    const Error = error{TestError};
+    // const Error = error{TestError};
     if (return_error) {
-        return Error.TestError;
+        return error.TestError;
     } else {
         return 100;
     }
