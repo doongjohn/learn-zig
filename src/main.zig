@@ -73,7 +73,7 @@ pub fn h2(comptime text: []const u8) void {
 pub fn main() !void {
     // init general purpose allocator
     var gpallocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpallocator.deinit();
+    defer std.debug.assert(gpallocator.deinit() == .ok); // leak detection
     const galloc = gpallocator.allocator();
 
     // // use c allocator for valgrind
