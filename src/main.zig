@@ -101,13 +101,12 @@ pub fn main() !void {
 
     h1("block");
     {
-        // block is an expression (can return a value)
+        // block can return a value
         var some_text = block_name: {
-            //          ^^^ --> this is a name of this block
+            //          ^^^^^^^^^^^ --> this is a name of this block
             if (true) {
-                break :block_name "wow";
-                //    ^^^^^^^^^^ --> break out of this block and return "wow"
-                //                   https://ziglang.org/documentation/master/#blocks
+                break :block_name "wow"; // --> break out of this block and return "wow"
+                //                              https://ziglang.org/documentation/master/#blocks
             } else {
                 break :block_name "hello";
             }
@@ -125,21 +124,25 @@ pub fn main() !void {
             defer i += 1;
             term.printf("{d} ", .{i});
         }
+        term.printf("while end: i = {d}\n", .{i});
         term.println("");
 
         i = 0;
         while (i < 5) : (i += 1) {
             term.printf("{d} ", .{i});
         }
+        term.printf("while end: i = {d}\n", .{i});
         term.println("");
 
         i = 0;
         while (i < 5) : ({
-            term.printf("{d} ", .{i});
+            term.print("(while :) ");
             i += 1;
         }) {
-            term.print("! ");
+            defer term.print("(defer) ");
+            term.printf("{d} ", .{i});
         }
+        term.printf("while end: i = {d}\n", .{i});
         term.println("");
     }
     {
