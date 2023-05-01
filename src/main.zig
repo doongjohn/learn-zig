@@ -310,8 +310,7 @@ pub fn main() !void {
         }
 
         h2("mem.set");
-        mem.set(@TypeOf(array[0]), &array, 3);
-        //  ^^^ --> set every elements in array to 3
+        @memset(&array, 3); // --> set every elements in array to 3
         for (array, 0..) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
