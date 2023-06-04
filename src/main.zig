@@ -335,7 +335,8 @@ pub fn main() !void {
         const msg =
             \\Hello, world!
             \\Zig is awesome!
-        ++ "\n";
+            \\
+        ;
         term.print(msg);
     }
     {
