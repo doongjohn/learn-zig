@@ -72,13 +72,13 @@ pub fn h2(comptime text: []const u8) void {
 
 pub fn main() !void {
     // init general purpose allocator
-    var gpallocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(gpallocator.deinit() == .ok); // leak detection
-    const galloc = gpallocator.allocator();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(gpa.deinit() == .ok); // leak detection
+    const galloc = gpa.allocator();
 
     // // use c allocator for valgrind
-    // var gpallocator = std.heap.c_allocator;
-    // const galloc = gpallocator;
+    // var gpa = std.heap.c_allocator;
+    // const galloc = gpa;
 
     // // init random number generator
     // const rng_seed = @intCast(u64, std.time.timestamp());
@@ -224,7 +224,7 @@ pub fn main() !void {
         var num: i32 = 20;
         var ptr: *const i32 = &num;
         //       ^^^^^^ --> immutable dereference
-        //                     ptr.* = 1; <-- this is compile time error
+        //                  ptr.* = 1; <-- this is compile time error
         term.printf("num: {d}\n", .{ptr.*});
     }
     {
