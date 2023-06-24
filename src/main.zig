@@ -36,10 +36,6 @@ const term = struct {
         stdout.print(format, args) catch unreachable;
     }
 
-    pub fn readByte() u8 {
-        return stdin.readByte() catch unreachable;
-    }
-
     const input_max = 32768;
     var input_buf: [input_max]u8 = undefined;
     var input_buf_utf16: [input_max]u16 = undefined;
@@ -136,7 +132,7 @@ pub fn main() !void {
 
         i = 0;
         while (i < 5) : ({
-            term.print("(while :) ");
+            term.print("(while :)\n");
             i += 1;
         }) {
             defer term.print("(defer) ");
@@ -272,13 +268,13 @@ pub fn main() !void {
             term.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
-        h2("init array pattern with ** operator");
+        h2("init array with ** operator");
         const array2 = [_]i64{ 1, 2, 3 } ** 3;
         //                   ^^^^^^^^^^^^^ --> this will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 }
         //                                     at compile time
         term.printf("{any}\n", .{array2});
 
-        h2("array assign");
+        h2("assigning array to array");
         // array gets copied when assigned
         var arr1 = [_]i32{ 0, 0, 0 };
         var arr2 = arr1;
@@ -309,7 +305,7 @@ pub fn main() !void {
             term.printf("[{d}]: {d}\n", .{ i, item });
         }
 
-        h2("mem.set");
+        h2("@memset");
         @memset(&array, 3); // --> set every elements in array to 3
         for (array, 0..) |item, i| {
             term.printf("[{d}]: {d}\n", .{ i, item });
@@ -319,6 +315,7 @@ pub fn main() !void {
         h2("strings");
 
         // strings are just u8 array
+        // (so handling Unicode is not trivial...)
         var yay = [_]u8{ 'y', 'a', 'y' };
         yay[0] = 'Y';
         term.println(yay[0..]);
@@ -328,7 +325,7 @@ pub fn main() !void {
         // read more: https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
         var str_lit = "haha";
         term.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
-        // (&str_lit[0]).* = 'A'; // <-- this is compile error because it's const slice
+        // (&str_lit[0]).* = 'A'; // <-- this is compile error because it's a const slice
         //                               very nice!
 
         // multiline string
@@ -395,15 +392,14 @@ pub fn main() !void {
     h1("terminal io");
     {
         term.print(">> terminal input: ");
-        const input = try term.readLine();
-        const trimmed = mem.trim(u8, input, "\r\n ");
-        //                                   ^^ --> including '\r' is important in windows!
-        //                                          https://github.com/ziglang/zig/issues/6754
-        term.printf("input: {s}\nlen: {d}\n", .{ trimmed, trimmed.len });
-        term.printf("unicode len: {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed)});
+        const input = mem.trim(u8, try term.readLine(), "\r\n ");
+        //                                               ^^ --> including '\r' is important in windows!
+        //                                                      https://github.com/ziglang/zig/issues/6754
+        term.printf("input: {s}\nlen: {d}\n", .{ input, input.len });
+        term.printf("unicode len: {d}\n", .{try std.unicode.utf8CountCodepoints(input)});
 
         // concat string
-        const concated = try mem.concat(galloc, u8, &[_][]const u8{ trimmed, "!!!" });
+        const concated = try mem.concat(galloc, u8, &[_][]const u8{ input, "!!!" });
         defer galloc.free(concated);
         term.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
         term.printf("unicode len: {d}\n", .{try std.unicode.utf8CountCodepoints(concated)});
@@ -427,10 +423,10 @@ pub fn main() !void {
         term.printf("num: {d}\n", .{some_struct.num});
         term.printf("text: {s}\n", .{some_struct.text});
 
-        var astruct: ReturnStruct() = undefined;
-        //           ^^^^^^^^^^^^^^
+        var astruct: FunctionThatReturnsType() = undefined;
+        //           ^^^^^^^^^^^^^^^^^^^^^^^
         //           └-> function returning anonymous struct can be used as a type
-        astruct = ReturnStruct(){};
+        astruct = FunctionThatReturnsType(){};
         term.printf("a: {d}\n", .{astruct.a});
         term.printf("b: {d}\n", .{astruct.b});
     }
@@ -449,24 +445,21 @@ pub fn main() !void {
         }
     }
 
-    h1("error");
+    h1("error & errdefer");
     {
-        // TODO: learn more about errors
         h2("with error");
-        _ = returnErrorFunc(true) catch |err| {
+        _ = returnError(true) catch |err| {
             term.printf("{!}\n", .{err});
         };
+
         h2("without error");
-        _ = returnErrorFunc(false) catch |err| {
+        _ = returnError(false) catch |err| {
             term.printf("{!}\n", .{err});
         };
     }
-
-    term.print("\npress enter to exit...");
-    _ = term.readByte();
 }
 
-fn ReturnStruct() type {
+fn FunctionThatReturnsType() type {
     return struct {
         a: i64 = 1,
         b: i64 = 10,
@@ -482,7 +475,7 @@ fn returnErrorAux(return_error: bool) !i64 {
     }
 }
 
-fn returnErrorFunc(return_error: bool) !i64 {
+fn returnError(return_error: bool) !i64 {
     errdefer term.println("errdefer");
     var num = try returnErrorAux(return_error);
     //        ^^^ -> `try` is equal to `someFunc() catch |err| return err;`
