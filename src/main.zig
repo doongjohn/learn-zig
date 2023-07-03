@@ -264,7 +264,9 @@ pub fn main() !void {
             //             ^^^^^  ^
             //             |      └> current index
             //             └> get element as a pointer (so that we can change its value)
-            item.* = @intCast(i64, i) + 1; // <-- type of array index is `usize`
+            item.* = @as(i64, @intCast(i)) + 1;
+            //       ^^^^^^^^^^^^^^^^^^^^^ <-- type of the array index `i` is `usize`
+            //                                 so I need to cast it to `i64`
             term.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
@@ -355,7 +357,7 @@ pub fn main() !void {
         defer galloc.free(array);
         //           ^^^^ --> deallocate array
         for (array, 0..) |*item, i| {
-            item.* = @intCast(i64, i); // generate random value
+            item.* = @as(i64, @intCast(i)); // generate random value
         }
         term.printf("{any}\n", .{array});
 
