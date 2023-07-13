@@ -1,3 +1,6 @@
+// https://ziglang.org/documentation/master/
+// https://www.openmymind.net/Zig-Quirks/
+
 const builtin = @import("builtin");
 const native_arch = builtin.cpu.arch;
 
