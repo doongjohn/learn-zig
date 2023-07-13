@@ -26,14 +26,14 @@ const term = struct {
     }
 
     pub fn print(str: []const u8) void {
-        _ = stdout.write(str) catch unreachable;
+        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {?}", .{err});
     }
     pub fn println(str: []const u8) void {
-        _ = stdout.write(str) catch unreachable;
-        _ = stdout.write("\n") catch unreachable;
+        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {?}", .{err});
+        _ = stdout.write("\n") catch |err| std.debug.panic("stdout.write error: {?}", .{err});
     }
     pub fn printf(comptime format: []const u8, args: anytype) void {
-        stdout.print(format, args) catch unreachable;
+        stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {?}", .{err});
     }
 
     const input_max = 32768;
@@ -69,16 +69,12 @@ pub fn h2(comptime text: []const u8) void {
 pub fn main() !void {
     // init general purpose allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(gpa.deinit() == .ok); // leak detection
+    defer std.debug.assert(gpa.deinit() == .ok); // detect memory leak
     const galloc = gpa.allocator();
 
     // // use c allocator for valgrind
     // var gpa = std.heap.c_allocator;
     // const galloc = gpa;
-
-    // // init random number generator
-    // const rng_seed = @intCast(u64, std.time.timestamp());
-    // const rng = std.rand.DefaultPrng.init(rng_seed).random();
 
     // init terminal io
     term.init();
@@ -86,8 +82,8 @@ pub fn main() !void {
     h1("variable");
     {
         var n: u8 = 0b0000_0_1_01;
-        //          ^^^^^^^^^^^^^ --> "_" can be used anywhere in the number literals
-        //                            for better readability
+        //          ^^^^^^^^^^^^^ --> "_" can be used anywhere in a
+        //                            number literal for better readability
         term.printf("{d}\n", .{n});
 
         const imm = 10;
@@ -144,6 +140,12 @@ pub fn main() !void {
     {
         h2("for loop");
         const string = "Hello world!";
+
+        // range
+        for (0..5) |i| { // 0 ~ 4
+            term.printf("{} ", .{i});
+        }
+        term.println("");
 
         // get element
         for (string) |byte| {
@@ -357,7 +359,7 @@ pub fn main() !void {
         defer galloc.free(array);
         //           ^^^^ --> deallocate array
         for (array, 0..) |*item, i| {
-            item.* = @as(i64, @intCast(i)); // generate random value
+            item.* = @as(i64, @intCast(i));
         }
         term.printf("{any}\n", .{array});
 
@@ -369,13 +371,6 @@ pub fn main() !void {
         try str_builder.appendSlice("this is cool! ");
         try str_builder.appendSlice("super power!");
         term.printf("{s}\n", .{str_builder.items});
-
-        // TODO: move this part to the random section
-        // h2("apply random values to the array elements");
-        // for (array) |*item| {
-        //     item.* = rng.intRangeAtMost(i64, 1, 10); // generate random value
-        // }
-        // term.printf("{any}\n", .{array});
     }
     {
         h2("concat array compiletime");
@@ -444,6 +439,19 @@ pub fn main() !void {
             .Hello => term.printf("{}\n", .{e}),
             .Bye => term.printf("{}\n", .{e}),
             else => term.println("other"),
+        }
+    }
+
+    h1("random");
+    {
+        // init random number generator
+        const rng_seed = @as(u64, @intCast(std.time.timestamp()));
+        var rng_impl = std.rand.DefaultPrng.init(rng_seed);
+        const random = rng_impl.random();
+
+        for (0..3) |_| {
+            const random_num = random.intRangeAtMost(i64, 1, 10); // generate random value
+            term.printf("random between 1 ~ 10 => {}\n", .{random_num});
         }
     }
 
