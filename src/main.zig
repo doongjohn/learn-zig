@@ -412,7 +412,7 @@ pub fn main() !void {
         const SomeStruct = struct {
             num: i64 = 0,
             //       ^^^ --> default value
-            text: []const u8, // no default value
+            text: []const u8, // <-- no default value
         };
 
         var some_struct = SomeStruct{ .text = "" }; // initalize struct by `StructName{}`
