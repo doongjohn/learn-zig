@@ -52,7 +52,8 @@ const term = struct {
             const len = try std.unicode.utf16leToUtf8(&input_buf, input_buf_utf16[0..readCount]);
             //                          ^^^^^^^^^^^^^
             //                          └> windows uses utf16 internally so I need to convert it to utf8
-            return mem.trimRight(u8, input_buf[0..len], "\r\n"); // trim windows newline
+            return mem.trimRight(u8, input_buf[0..len], "\r\n");
+            //                                           ^^^^ --> also trim windows '\r'
         } else {
             return try stdin.readUntilDelimiter(&input_buf, '\n');
             //               ^^^^^^^^^^^^^^^^^^
