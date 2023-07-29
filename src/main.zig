@@ -471,6 +471,20 @@ pub fn main() !void {
             term.printf("{!}\n", .{err});
         };
     }
+
+    // function pointer
+    const f: *const fn () void = haha;
+    f();
+    term.printf("{s}\n", .{@typeName(@TypeOf(f))});
+
+    // function alias
+    const f2: fn () void = haha;
+    f2();
+    term.printf("{s}\n", .{@typeName(@TypeOf(f2))});
+}
+
+fn haha() void {
+    std.debug.print("haha\n", .{});
 }
 
 fn FunctionThatReturnsType() type {
