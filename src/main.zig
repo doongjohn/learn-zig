@@ -51,7 +51,7 @@ const term = struct {
             _ = ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null);
             const len = try std.unicode.utf16leToUtf8(&input_buf, input_buf_utf16[0..readCount]);
             //                          ^^^^^^^^^^^^^
-            //                          └> windows uses utf16 internally so I need to convert it to utf8
+            //                          └> windows uses utf16 internally so you need to convert it to utf8 which zig uses
             return mem.trimRight(u8, input_buf[0..len], "\r\n");
             //                                           ^^^^ --> also trim windows '\r'
         } else {
