@@ -430,6 +430,11 @@ pub fn main() !void {
         astruct = FunctionThatReturnsType(){};
         term.printf("a: {d}\n", .{astruct.a});
         term.printf("b: {d}\n", .{astruct.b});
+
+        // anonymous structs can be used as a tuple
+        var tuple = .{ "hi", "yo" };
+        term.printf("{s}\n", .{tuple[0]});
+        term.printf("{s}\n", .{tuple[1]});
     }
 
     h1("enum");
