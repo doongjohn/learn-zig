@@ -48,7 +48,9 @@ const term = struct {
     pub fn readLine() ![]const u8 {
         if (comptime builtin.os.tag == .windows) {
             var readCount: u32 = undefined;
-            _ = ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null);
+            if (!ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null))
+                return error.ReadConsoleFailed;
+
             const len = try std.unicode.utf16leToUtf8(&input_buf, input_buf_utf16[0..readCount]);
             //                          ^^^^^^^^^^^^^
             //                          └> windows uses utf16 internally so you need to convert it to utf8 which zig uses
