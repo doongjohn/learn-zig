@@ -433,10 +433,18 @@ pub fn main() !void {
         term.printf("a: {d}\n", .{astruct.a});
         term.printf("b: {d}\n", .{astruct.b});
 
+        h2("tuple");
         // anonymous structs can be used as a tuple
+        // https://ziglang.org/documentation/master/#Tuples
         var tuple = .{ "hi", "yo" };
         term.printf("{s}\n", .{tuple[0]});
         term.printf("{s}\n", .{tuple[1]});
+
+        // structs can be combined at compiletime
+        var tuple2 = tuple ++ .{"wow"};
+        term.printf("{s}\n", .{tuple2[0]});
+        term.printf("{s}\n", .{tuple2[1]});
+        term.printf("{s}\n", .{tuple2[2]});
     }
 
     h1("enum");
