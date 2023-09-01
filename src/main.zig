@@ -134,11 +134,11 @@ pub fn main() !void {
 
         i = 0;
         while (i < 5) : ({
-            term.print("(while :)\n");
+            term.print("(while : ())\n");
             i += 1;
         }) {
             defer term.print("(defer) ");
-            term.printf("{d} ", .{i});
+            term.printf("while body: {d} ", .{i});
         }
         term.printf("while end: i = {d}\n", .{i});
         term.println("");
