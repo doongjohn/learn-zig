@@ -433,6 +433,19 @@ pub fn main() !void {
         term.printf("a: {d}\n", .{astruct.a});
         term.printf("b: {d}\n", .{astruct.b});
 
+        // result location semantics
+        // https://www.youtube.com/watch?v=dEIsJPpCZYg
+        var s: struct { a: i32, b: i32 } = .{
+            .a = 10,
+            .b = 20,
+        };
+        term.printf("s: {}\n", .{s});
+        s = .{
+            .a = 50, // <-- writes 50 to s.a
+            .b = s.a, // <-- writes s.a to s.b so it becomes 50
+        };
+        term.printf("s: {}\n", .{s});
+
         h2("tuple");
         // anonymous structs can be used as a tuple
         // https://ziglang.org/documentation/master/#Tuples
