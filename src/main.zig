@@ -329,6 +329,7 @@ pub fn main() !void {
         var yay = [_]u8{ 'y', 'a', 'y' };
         yay[0] = 'Y';
         term.println(yay[0..]);
+        term.printf("{s}\n", .{@typeName(@TypeOf(yay))});
 
         // string literals are const slice to null terminated u8 array
         // read more: https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
@@ -458,6 +459,11 @@ pub fn main() !void {
         term.printf("{s}\n", .{tuple2[0]});
         term.printf("{s}\n", .{tuple2[1]});
         term.printf("{s}\n", .{tuple2[2]});
+
+        // h2("destructuring");
+        // var a: i32, var b: []const u8 = .{ .a = 10, .b = "hello" };
+        // term.printf("a = {d}\n", .{a});
+        // term.printf("b = {s}\n", .{b});
     }
 
     h1("enum");
