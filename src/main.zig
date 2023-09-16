@@ -65,11 +65,11 @@ const term = struct {
 };
 
 pub fn h1(comptime text: []const u8) void {
-    term.println("\n\n# " ++ text);
+    term.println("\n\x1b[1;92m" ++ "# " ++ text ++ "\x1b[0m");
 }
 
 pub fn h2(comptime text: []const u8) void {
-    term.println("\n## " ++ text);
+    term.println("\n\x1b[1;32m" ++ "## " ++ text ++ "\x1b[0m");
 }
 
 pub fn main() !void {
@@ -500,15 +500,29 @@ pub fn main() !void {
         };
     }
 
-    // function pointer
-    const f: *const fn () void = haha;
-    f();
-    term.printf("{s}\n", .{@typeName(@TypeOf(f))});
+    h1("function pointer");
+    {
+        const f: *const fn () void = haha;
+        f();
+        term.printf("{s}\n", .{@typeName(@TypeOf(f))});
 
-    // function alias
-    const f2: fn () void = haha;
-    f2();
-    term.printf("{s}\n", .{@typeName(@TypeOf(f2))});
+        // function alias
+        const f2: fn () void = haha;
+        f2();
+        term.printf("{s}\n", .{@typeName(@TypeOf(f2))});
+    }
+
+    h1("refiy type");
+    {
+        // https://github.com/ziglang/zig/blob/61b70778bdf975957d45432987dde16029aca69a/lib/std/builtin.zig#L228
+        const MyInt = @Type(.{ .Int = .{
+            .signedness = .signed,
+            .bits = 32,
+        } });
+
+        var a: MyInt = 20;
+        term.printf("{d}\n", .{a});
+    }
 }
 
 fn haha() void {
