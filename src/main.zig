@@ -450,20 +450,33 @@ pub fn main() !void {
         h2("tuple");
         // anonymous structs can be used as a tuple
         // https://ziglang.org/documentation/master/#Tuples
-        var tuple = .{ "hi", "yo" };
-        term.printf("{s}\n", .{tuple[0]});
+        var tuple = .{ @as(i32, 100), "yo" };
+        term.printf("{d}\n", .{tuple[0]});
         term.printf("{s}\n", .{tuple[1]});
 
         // structs can be combined at compiletime
         var tuple2 = tuple ++ .{"wow"};
-        term.printf("{s}\n", .{tuple2[0]});
+        term.printf("{d}\n", .{tuple2[0]});
         term.printf("{s}\n", .{tuple2[1]});
         term.printf("{s}\n", .{tuple2[2]});
+    }
 
-        // h2("destructuring");
-        // var a: i32, var b: []const u8 = .{ .a = 10, .b = "hello" };
-        // term.printf("a = {d}\n", .{a});
-        // term.printf("b = {s}\n", .{b});
+    h1("destructuring");
+    {
+        // destructuring can be done with
+        // * Tuples
+        // * Arrays
+        // * Vectors
+
+        var tuple = .{ @as(i32, 10), "hello" };
+        var num, var str = tuple;
+        term.printf("num = {d}\n", .{num});
+        term.printf("str = {s}\n", .{str});
+
+        var arr = [_]i32{ 1, 2, 3, 4 };
+        var n1, var n2, _, _ = arr;
+        term.printf("n1 = {d}\n", .{n1});
+        term.printf("n2 = {d}\n", .{n2});
     }
 
     h1("enum");
