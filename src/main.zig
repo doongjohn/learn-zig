@@ -479,10 +479,25 @@ pub fn main() !void {
         term.printf("n2 = {d}\n", .{n2});
     }
 
+    h1("lambda");
+    {
+        const TestLambda = struct {
+            data: i32,
+
+            fn func(self: @This()) void {
+                term.printf("this is lambda, data = {d}\n", .{self.data});
+            }
+        };
+
+        const a = 100;
+        testLambdaCaller(TestLambda{ .data = a });
+    }
+
     h1("enum");
     {
         const MyEnum = enum(u8) { Hello, Bye, _ };
         //                                    ^ --> non-exhaustive enum
+        //                                          must use else in the switch
 
         var e: MyEnum = .Hello;
 
@@ -553,6 +568,13 @@ fn FunctionThatReturnsType() type {
         a: i64 = 1,
         b: i64 = 10,
     };
+}
+
+fn testLambdaCaller(lambda: anytype) void {
+    if (!@hasDecl(@TypeOf(lambda), "func"))
+        @compileError("lambda must have a function `fn func()`");
+
+    lambda.func();
 }
 
 fn returnErrorAux(return_error: bool) !i64 {
