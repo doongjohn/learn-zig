@@ -570,8 +570,8 @@ fn FunctionThatReturnsType() type {
 }
 
 fn testLambdaCaller(lambda: anytype) void {
-    if (!@hasDecl(@TypeOf(lambda), "func"))
-        @compileError("lambda must have a function `fn func()`");
+    if (@TypeOf(@TypeOf(lambda).func) != fn (self: @TypeOf(lambda)) void)
+        @compileError("lambda must have a function `fn func(self)`");
 
     lambda.func();
 }
