@@ -65,11 +65,11 @@ const term = struct {
 };
 
 pub fn h1(comptime text: []const u8) void {
-    term.println("\n\x1b[1;92m" ++ "# " ++ text ++ "\x1b[0m");
+    term.println("\n\x1b[;92m" ++ "# " ++ text ++ "\x1b[0m");
 }
 
 pub fn h2(comptime text: []const u8) void {
-    term.println("\n\x1b[1;32m" ++ "## " ++ text ++ "\x1b[0m");
+    term.println("\n\x1b[;32m" ++ "## " ++ text ++ "\x1b[0m");
 }
 
 pub fn main() !void {
@@ -141,7 +141,6 @@ pub fn main() !void {
             term.printf("while body: {d} ", .{i});
         }
         term.printf("while end: i = {d}\n", .{i});
-        term.println("");
     }
     {
         h2("for loop");
