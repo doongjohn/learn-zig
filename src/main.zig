@@ -100,13 +100,13 @@ pub fn main() !void {
     h1("block");
     {
         // block can return a value
-        var some_text = block_name: {
+        var some_text = some_block: {
             //          ^^^^^^^^^^^ --> this is a name of this block
             if (true) {
-                break :block_name "wow"; // --> break out of this block and return "wow"
+                break :some_block "wow"; // --> break out of this block and return "wow"
                 //                              https://ziglang.org/documentation/master/#blocks
             } else {
-                break :block_name "hello";
+                break :some_block "hello";
             }
         };
         term.println(some_text);
@@ -496,7 +496,7 @@ pub fn main() !void {
     {
         const MyEnum = enum(u8) { Hello, Bye, _ };
         //                                    ^ --> non-exhaustive enum
-        //                                          must use else in the switch
+        //                                          must use `else` in the switch
 
         var e: MyEnum = .Hello;
 
