@@ -494,6 +494,7 @@ pub fn main() !void {
         // * Vectors
 
         var tuple = .{ @as(i32, 10), "hello" };
+        term.printf("{s}\n", .{@typeName(@TypeOf(tuple))});
         var num, var str = tuple;
         term.printf("num = {d}\n", .{num});
         term.printf("str = {s}\n", .{str});
@@ -525,8 +526,28 @@ pub fn main() !void {
             .bits = 32,
         } });
 
-        var a: MyInt = 20;
-        term.printf("{d}\n", .{a});
+        var n: MyInt = 20;
+        term.printf("{d}\n", .{n});
+
+        // multiple unwrap using refiy type
+        var opt_a: ?i32 = null;
+        var opt_b: ?f32 = 2.2;
+        if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
+            var a, var b = unwrapped;
+            term.println("unwrap success");
+            term.printf("a = {}, b = {}\n", .{ a, b });
+        } else {
+            term.println("unwrap failed");
+        }
+
+        opt_a = 10;
+        if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
+            var a, var b = unwrapped;
+            term.println("unwrap success");
+            term.printf("a = {}, b = {}\n", .{ a, b });
+        } else {
+            term.println("unwrap failed");
+        }
     }
 
     h1("lambda");
@@ -559,6 +580,52 @@ pub fn main() !void {
 
 fn haha() void {
     std.debug.print("haha\n", .{});
+}
+
+fn UnwrappedType(comptime T: type) type {
+    switch (@typeInfo(T)) {
+        .Struct => |struct_info| {
+            var unwrapped_fields: [struct_info.fields.len]std.builtin.Type.StructField = undefined;
+            inline for (struct_info.fields, 0..) |field, i| {
+                switch (@typeInfo(field.type)) {
+                    .Optional => |field_info| {
+                        unwrapped_fields[i] = .{
+                            .name = field.name,
+                            .type = field_info.child,
+                            .default_value = field.default_value,
+                            .is_comptime = field.is_comptime,
+                            .alignment = @sizeOf(usize), // TODO: what should I do?
+                        };
+                    },
+                    else => @compileError("all fields must be an optional type!"),
+                }
+            }
+
+            return @Type(.{
+                .Struct = .{
+                    .layout = .Auto,
+                    .fields = &unwrapped_fields,
+                    .decls = &.{},
+                    .is_tuple = true,
+                },
+            });
+        },
+        else => @compileError("parameter must be a struct type!"),
+    }
+}
+
+fn unwrapAll(tuple: anytype) ?UnwrappedType(@TypeOf(tuple)) {
+    var result: UnwrappedType(@TypeOf(tuple)) = undefined;
+    inline for (tuple, 0..) |opt_field, i| {
+        if (opt_field) |field| {
+            result[i] = field;
+        } else {
+            break;
+        }
+    } else {
+        return result;
+    }
+    return null;
 }
 
 // name of a function that returns a type should start with a capital letter
