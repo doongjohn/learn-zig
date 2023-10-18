@@ -78,18 +78,31 @@ pub fn main() !void {
     defer std.debug.assert(gpa.deinit() == .ok); // detect memory leak
     const galloc = gpa.allocator();
 
-    // // use c allocator for valgrind
-    // var gpa = std.heap.c_allocator;
-    // const galloc = gpa;
+    // use c allocator for valgrind
+    // (you also need to link libc to use this)
+    // const galloc = std.heap.c_allocator;
 
     // init terminal io
     term.init();
+
+    h1("terminal io");
+    {
+        term.print(">> terminal input: ");
+        const raw_input = try term.readLine();
+        term.printf("raw_input = {s}\n", std.fmt.fmtSliceEscapeLower(raw_input));
+
+        const trimmed_input = mem.trim(u8, raw_input, "\t ");
+        //                                             ^^^ --> trim whitespace
+        term.printf("trimmed_input = {s}\n", .{trimmed_input});
+        term.printf("byte len = {d}\n", .{trimmed_input.len});
+        term.printf("unicode len = {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed_input)});
+    }
 
     h1("variable");
     {
         var n: u8 = 0b0000_0_1_01;
         //          ^^^^^^^^^^^^^ --> "_" can be used anywhere in a
-        //                            number literal for better readability
+        //                            numeric literal for better readability
         term.printf("{d}\n", .{n});
 
         const imm = 10;
@@ -242,24 +255,38 @@ pub fn main() !void {
     }
     {
         h2("optional(nullable) pointer");
-        var ptr: ?*i32 = null;
-        //       ^ --> optional type (null is allowed)
-        //             it is zero cost for the pointer
-        ptr = try galloc.create(i32);
-        defer galloc.destroy(ptr.?);
-        //                      ^^ --> unwraps optional (runtime error if null)
+        var opt_ptr: ?*i32 = null;
+        //           ^ --> optional type (null is allowed)
+        //                 it is zero cost for the pointer
 
-        ptr.?.* = 100;
-        term.printf("optional pointer value: {d}\n", .{ptr.?.*});
+        opt_ptr = try galloc.create(i32);
+        defer if (opt_ptr) |ptr| galloc.destroy(ptr);
 
-        if (ptr) |value| {
-            //   ^^^^^^^ --> this unwraps ptr and the captured value is
-            //               only available in this block
-            value.* = 10;
-            term.printf("optional pointer value: {d}\n", .{value.*});
+        opt_ptr.?.* = 100;
+        //     ^^ --> unwraps optional (runtime error if null)
+        term.printf("optional pointer value: {d}\n", .{opt_ptr.?.*});
+
+        if (opt_ptr) |ptr| {
+            //        ^^^ --> this is unwrapped ptr and this variable is
+            //                only available in this scope
+            ptr.* = 10;
+            term.printf("optional pointer value: {d}\n", .{ptr.*});
         } else {
             term.println("optional pointer value: null");
         }
+    }
+
+    h1("function pointer & alias");
+    {
+        // function pointer
+        const f: *const fn () void = haha;
+        f();
+        term.printf("{s}\n", .{@typeName(@TypeOf(f))});
+
+        // function alias
+        const f2: fn () void = haha;
+        f2();
+        term.printf("{s}\n", .{@typeName(@TypeOf(f2))});
     }
 
     h1("array");
@@ -333,7 +360,7 @@ pub fn main() !void {
         // string literals are const slice to null terminated u8 array
         // read more: https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
         // read more: https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
-        var str_lit = "haha";
+        var str_lit = "this is a string literal";
         term.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
         // (&str_lit[0]).* = 'A'; // <-- this is compile error because it's a const slice
         //                               very nice!
@@ -372,7 +399,7 @@ pub fn main() !void {
         h2("std.ArrayList");
         // string builder like function with ArrayList
         var str_builder = std.ArrayList(u8).init(galloc);
-        defer _ = str_builder.deinit();
+        defer str_builder.deinit();
         try str_builder.appendSlice("wow ");
         try str_builder.appendSlice("this is cool! ");
         try str_builder.appendSlice("super power!");
@@ -392,20 +419,19 @@ pub fn main() !void {
         term.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
     }
 
-    h1("terminal io");
+    h1("enum");
     {
-        term.print(">> terminal input: ");
-        const input = mem.trim(u8, try term.readLine(), "\r\n ");
-        //                                               ^^ --> including '\r' is important in windows!
-        //                                                      https://github.com/ziglang/zig/issues/6754
-        term.printf("input: {s}\nlen: {d}\n", .{ input, input.len });
-        term.printf("unicode len: {d}\n", .{try std.unicode.utf8CountCodepoints(input)});
+        const MyEnum = enum(u8) { Hello, Bye, _ };
+        //                                    ^ --> non-exhaustive enum
+        //                                          must use `else` in the switch
 
-        // concat string
-        const concated = try mem.concat(galloc, u8, &[_][]const u8{ input, "!!!" });
-        defer galloc.free(concated);
-        term.printf("concated: {s}\nlen: {d}\n", .{ concated, concated.len });
-        term.printf("unicode len: {d}\n", .{try std.unicode.utf8CountCodepoints(concated)});
+        var e: MyEnum = .Hello;
+
+        switch (e) {
+            .Hello => term.printf("{}\n", .{e}),
+            .Bye => term.printf("{}\n", .{e}),
+            else => term.println("other"),
+        }
     }
 
     h1("struct");
@@ -478,6 +504,31 @@ pub fn main() !void {
         term.printf("n2 = {d}\n", .{n2});
     }
 
+    h1("error & errdefer");
+    {
+        h2("with error");
+        returnError(true) catch |err| {
+            term.printf("{!}\n", .{err});
+        };
+
+        h2("without error");
+        returnError(false) catch |err| {
+            term.printf("{!}\n", .{err});
+        };
+    }
+
+    h1("refiy type");
+    {
+        // https://github.com/ziglang/zig/blob/61b70778bdf975957d45432987dde16029aca69a/lib/std/builtin.zig#L228
+        const MyInt = @Type(.{ .Int = .{
+            .signedness = .signed,
+            .bits = 32,
+        } });
+
+        var a: MyInt = 20;
+        term.printf("{d}\n", .{a});
+    }
+
     h1("lambda");
     {
         const TestLambda = struct {
@@ -492,21 +543,6 @@ pub fn main() !void {
         testLambdaCaller(TestLambda{ .data = a });
     }
 
-    h1("enum");
-    {
-        const MyEnum = enum(u8) { Hello, Bye, _ };
-        //                                    ^ --> non-exhaustive enum
-        //                                          must use `else` in the switch
-
-        var e: MyEnum = .Hello;
-
-        switch (e) {
-            .Hello => term.printf("{}\n", .{e}),
-            .Bye => term.printf("{}\n", .{e}),
-            else => term.println("other"),
-        }
-    }
-
     h1("random");
     {
         // init random number generator
@@ -519,49 +555,13 @@ pub fn main() !void {
             term.printf("random between 1 ~ 10 => {}\n", .{random_num});
         }
     }
-
-    h1("error & errdefer");
-    {
-        h2("with error");
-        _ = returnError(true) catch |err| {
-            term.printf("{!}\n", .{err});
-        };
-
-        h2("without error");
-        _ = returnError(false) catch |err| {
-            term.printf("{!}\n", .{err});
-        };
-    }
-
-    h1("function pointer");
-    {
-        const f: *const fn () void = haha;
-        f();
-        term.printf("{s}\n", .{@typeName(@TypeOf(f))});
-
-        // function alias
-        const f2: fn () void = haha;
-        f2();
-        term.printf("{s}\n", .{@typeName(@TypeOf(f2))});
-    }
-
-    h1("refiy type");
-    {
-        // https://github.com/ziglang/zig/blob/61b70778bdf975957d45432987dde16029aca69a/lib/std/builtin.zig#L228
-        const MyInt = @Type(.{ .Int = .{
-            .signedness = .signed,
-            .bits = 32,
-        } });
-
-        var a: MyInt = 20;
-        term.printf("{d}\n", .{a});
-    }
 }
 
 fn haha() void {
     std.debug.print("haha\n", .{});
 }
 
+// name of a function that returns a type should start with a capital letter
 fn FunctionThatReturnsType() type {
     return struct {
         a: i64 = 1,
@@ -576,20 +576,18 @@ fn testLambdaCaller(lambda: anytype) void {
     lambda.func();
 }
 
-fn returnErrorAux(return_error: bool) !i64 {
-    // const Error = error{TestError};
+fn returnErrorInner(return_error: bool) !void {
+    // const Error = error{TestError}; // --> error set
+    //                                        https://ziglang.org/documentation/master/#Errors
     if (return_error) {
         return error.TestError;
     } else {
-        return 100;
+        return;
     }
 }
 
-fn returnError(return_error: bool) !i64 {
+fn returnError(return_error: bool) !void {
     errdefer term.println("errdefer");
-    var num = try returnErrorAux(return_error);
-    //        ^^^ -> `try` is equal to `someFunc() catch |err| return err;`
-    //               so if it returns an error,
-    //               code below here will not be executed
-    return num;
+    try returnErrorInner(return_error); // --> `try` is equal to `someFunc() catch |err| return err;`
+    //                                          so if it returns an error, code below here will not be executed
 }
