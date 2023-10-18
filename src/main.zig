@@ -317,6 +317,11 @@ pub fn main() !void {
         term.printf("arr1: {p}\n", .{&arr1[0]});
         term.printf("arr2: {p}\n", .{&arr2[0]});
 
+        h2("concat array compile-time");
+        const concated = "wow " ++ "hey " ++ "yay";
+        //                      ^^ --> compiletime array concatenation operator
+        term.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+
         h2("slice");
         var arr1_slice = arr1[0..]; // a slice is a pointer and a length (its length is known at runtime)
         //                    ^^^
@@ -396,6 +401,12 @@ pub fn main() !void {
         }
         term.printf("{any}\n", .{array});
 
+        h2("concat array run-time");
+        const words = [_][]const u8{ "wow ", "hey ", "yay" };
+        const concated = try mem.concat(galloc, u8, words[0..]);
+        defer galloc.free(concated);
+        term.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+
         h2("std.ArrayList");
         // string builder like function with ArrayList
         var str_builder = std.ArrayList(u8).init(galloc);
@@ -405,19 +416,6 @@ pub fn main() !void {
         try str_builder.appendSlice("super power!");
         term.printf("{s}\n", .{str_builder.items});
     }
-    {
-        h2("concat array compiletime");
-        const concated = "wow " ++ "hey " ++ "yay";
-        //                      ^^ --> compiletime array concatenation operator
-        term.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
-    }
-    {
-        h2("concat array runtime");
-        const words = [_][]const u8{ "wow ", "hey ", "yay" };
-        const concated = try mem.concat(galloc, u8, words[0..]);
-        defer galloc.free(concated);
-        term.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
-    }
 
     h1("enum");
     {
@@ -426,7 +424,6 @@ pub fn main() !void {
         //                                          must use `else` in the switch
 
         var e: MyEnum = .Hello;
-
         switch (e) {
             .Hello => term.printf("{}\n", .{e}),
             .Bye => term.printf("{}\n", .{e}),
@@ -436,12 +433,11 @@ pub fn main() !void {
 
     h1("struct");
     {
-        // all structs are anonymous
-        // see: https://ziglang.org/documentation/master/#Struct-Naming
+        // all types including struct is a value that can be stored in a comptime variable
+        // https://ziglang.org/documentation/master/#Struct-Naming
         const SomeStruct = struct {
-            num: i64 = 0,
-            //       ^^^ --> default value
-            text: []const u8, // <-- no default value
+            num: i64 = 0, // <-- this field has a default value
+            text: []const u8,
         };
 
         var some_struct = SomeStruct{ .text = "" }; // initalize struct by `StructName{}`
@@ -449,15 +445,14 @@ pub fn main() !void {
         //                            └-> this is necessary because `text` has no default value
         some_struct.num = 10;
         some_struct.text = "hello";
-        term.printf("num: {d}\n", .{some_struct.num});
-        term.printf("text: {s}\n", .{some_struct.text});
+        term.printf("some_struct = {}\n", .{some_struct});
+        term.printf("some_struct.text = {s}\n", .{some_struct.text});
 
-        var astruct: FunctionThatReturnsType() = undefined;
-        //           ^^^^^^^^^^^^^^^^^^^^^^^
-        //           └-> function returning anonymous struct can be used as a type
-        astruct = FunctionThatReturnsType(){};
-        term.printf("a: {d}\n", .{astruct.a});
-        term.printf("b: {d}\n", .{astruct.b});
+        var point: Point2d() = undefined;
+        //         ^^^^^^^^^
+        //         └-> function returning a type can be used as a type
+        point = Point2d(){ .x = 10, .y = 20 };
+        term.printf("point = {}\n", .{point});
 
         // result location semantics
         // https://www.youtube.com/watch?v=dEIsJPpCZYg
@@ -473,7 +468,7 @@ pub fn main() !void {
         term.printf("s: {}\n", .{s});
 
         h2("tuple");
-        // anonymous structs can be used as a tuple
+        // struct without field name can be used as a tuple
         // https://ziglang.org/documentation/master/#Tuples
         var tuple = .{ @as(i32, 100), "yo" };
         term.printf("{d}\n", .{tuple[0]});
@@ -520,6 +515,7 @@ pub fn main() !void {
 
     h1("refiy type");
     {
+        // type can be created at compile-time
         // https://github.com/ziglang/zig/blob/61b70778bdf975957d45432987dde16029aca69a/lib/std/builtin.zig#L228
         const MyInt = @Type(.{ .Int = .{
             .signedness = .signed,
@@ -567,8 +563,8 @@ pub fn main() !void {
     h1("random");
     {
         // init random number generator
-        const rng_seed = @as(u64, @intCast(std.time.timestamp()));
-        var rng_impl = std.rand.DefaultPrng.init(rng_seed);
+        const seed = @as(u64, @intCast(std.time.timestamp()));
+        var rng_impl = std.rand.DefaultPrng.init(seed);
         const random = rng_impl.random();
 
         for (0..3) |_| {
@@ -629,10 +625,10 @@ fn unwrapAll(tuple: anytype) ?UnwrappedType(@TypeOf(tuple)) {
 }
 
 // name of a function that returns a type should start with a capital letter
-fn FunctionThatReturnsType() type {
+fn Point2d() type {
     return struct {
-        a: i64 = 1,
-        b: i64 = 10,
+        x: i64 = 0,
+        y: i64 = 0,
     };
 }
 
