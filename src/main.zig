@@ -609,7 +609,7 @@ fn UnwrappedType(comptime T: type) type {
                             .alignment = 0, // meaningless for `.layout = .Auto`
                         };
                     },
-                    else => @compileError("all fields must be an optional type!"),
+                    else => @compileError("all fields must be optional type!"),
                 }
             }
 
@@ -622,7 +622,7 @@ fn UnwrappedType(comptime T: type) type {
                 },
             });
         },
-        else => @compileError("parameter must be a struct type!"),
+        else => @compileError("parameter must be struct type!"),
     }
 }
 
