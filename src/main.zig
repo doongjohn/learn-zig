@@ -282,6 +282,14 @@ pub fn main() !void {
         } else {
             Console.println("optional pointer value: null");
         }
+
+        blk: {
+            var ptr = opt_ptr orelse break :blk;
+            //                ^^^^^^ --> it returns unwrapped valur if the value is not null
+            //                           https://ziglang.org/documentation/master/#Optionals
+            ptr.* += 10;
+            Console.printf("optional pointer value: {d}\n", .{ptr.*});
+        }
     }
 
     h1("function pointer & alias");
