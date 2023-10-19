@@ -598,7 +598,7 @@ fn UnwrappedType(comptime T: type) type {
                             .type = field_info.child,
                             .default_value = field.default_value,
                             .is_comptime = field.is_comptime,
-                            .alignment = @sizeOf(usize), // TODO: what should I do?
+                            .alignment = 0, // not used for `.layout = .Auto`
                         };
                     },
                     else => @compileError("all fields must be an optional type!"),
