@@ -583,7 +583,7 @@ pub fn main() !void {
         var rng_impl = std.rand.DefaultPrng.init(seed);
         const random = rng_impl.random();
 
-        for (0..3) |_| {
+        for (0..5) |_| {
             const random_num = random.intRangeAtMost(i64, 1, 10); // generate random value
             Console.printf("random between 1 ~ 10 => {}\n", .{random_num});
         }
