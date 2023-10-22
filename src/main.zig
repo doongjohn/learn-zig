@@ -26,16 +26,16 @@ const Console = struct {
     }
 
     pub fn print(str: []const u8) void {
-        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {?}", .{err});
+        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {!}", .{err});
     }
 
     pub fn println(str: []const u8) void {
-        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {?}", .{err});
-        _ = stdout.write("\n") catch |err| std.debug.panic("stdout.write error: {?}", .{err});
+        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {!}", .{err});
+        _ = stdout.write("\n") catch |err| std.debug.panic("stdout.write error: {!}", .{err});
     }
 
     pub fn printf(comptime format: []const u8, args: anytype) void {
-        stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {?}", .{err});
+        stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {!}", .{err});
     }
 
     const input_max = 32768;
