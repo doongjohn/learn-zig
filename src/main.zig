@@ -87,7 +87,7 @@ pub fn main() !void {
     const galloc = gpa.allocator();
 
     // use c allocator for valgrind
-    // (you also need to link libc to use this)
+    // (you need to link libc to use this)
     // const galloc = std.heap.c_allocator;
 
     // init terminal io
