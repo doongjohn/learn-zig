@@ -15,11 +15,14 @@ const console = struct {
     extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
     extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 
-    const stdout = std.io.getStdOut().writer();
-    const stdin = std.io.getStdIn().reader();
-    const stdin_handle = std.io.getStdIn().handle;
+    var stdout: std.fs.File.Writer = undefined;
+    var stdin: std.fs.File.Reader = undefined;
+    var stdin_handle: std.os.fd_t = undefined;
 
     pub fn init() void {
+        stdout = std.io.getStdOut().writer();
+        stdin = std.io.getStdIn().reader();
+        stdin_handle = std.io.getStdIn().handle;
         if (comptime builtin.os.tag == .windows) {
             _ = SetConsoleOutputCP(65001);
         }
@@ -102,8 +105,8 @@ pub fn main() !void {
         const trimmed_input = mem.trim(u8, raw_input, "\t ");
         //                                             ^^^ --> trim whitespace
         console.printf("trimmed_input = {s}\n", .{trimmed_input});
-        console.printf("byte len = {d}\n", .{trimmed_input.len});
-        console.printf("unicode len = {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed_input)});
+        console.printf("byte length = {d}\n", .{trimmed_input.len});
+        console.printf("unicode length = {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed_input)});
     }
 
     h1("variable");
@@ -666,7 +669,9 @@ fn returnErrorInner(return_error: bool) !void {
 }
 
 fn returnError(return_error: bool) !void {
-    errdefer console.println("errdefer");
+    errdefer console.println("errdefer"); // --> errdefer only gets executed when
+    //                                           this function returns an error
+
     try returnErrorInner(return_error); // --> `try` is equal to `someFunc() catch |err| return err;`
     //                                          so if it returns an error, code below here will not be executed
 }
