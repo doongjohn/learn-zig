@@ -127,8 +127,8 @@ pub fn main() !void {
         var some_text = some_block: {
             //          ^^^^^^^^^^^ --> this is a name of this block
             if (true) {
-                break :some_block "wow"; // --> break out of this block and return "wow"
-                //                              https://ziglang.org/documentation/master/#blocks
+                break :some_block "value"; // --> break out of this block and return "value"
+                //                                https://ziglang.org/documentation/master/#blocks
             } else {
                 break :some_block "hello";
             }
