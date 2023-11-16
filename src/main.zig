@@ -219,7 +219,7 @@ pub fn main() !void {
 
         const string2 = "hello";
         console.printf("find w in {s}\n", .{string2});
-        console.println("if not found return \'x\'");
+        console.println("if w is not found: return \'x\'");
         const w2 = for (string2) |byte| {
             if (byte == 'w') {
                 break byte;
