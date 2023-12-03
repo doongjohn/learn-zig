@@ -111,8 +111,8 @@ pub fn main() !void {
 
     h1("variable");
     {
-        var n: u8 = 0b0000_0_1_01;
-        //          ^^^^^^^^^^^^^ --> "_" can be used anywhere in a
+        const n: u8 = 0b0000_0_1_01;
+        //            ^^^^^^^^^^^^^ --> "_" can be used anywhere in a
         //                            numeric literal for better readability
         console.printf("{d}\n", .{n});
 
@@ -124,8 +124,8 @@ pub fn main() !void {
     h1("block");
     {
         // block can return a value
-        var some_text = some_block: {
-            //          ^^^^^^^^^^^ --> this is a name of this block
+        const some_text = some_block: {
+            //            ^^^^^^^^^^^ --> this is a name of this block
             if (true) {
                 break :some_block "value"; // --> break out of this block and return "value"
                 //                                https://ziglang.org/documentation/master/#blocks
@@ -194,7 +194,7 @@ pub fn main() !void {
         }
 
         // multi-object for loop
-        var arr1 = [_]i32{ 1, 2, 3, 4, 5, 6 };
+        const arr1 = [_]i32{ 1, 2, 3, 4, 5, 6 };
         var arr2 = [_]i32{ 2, 3, 4, 5, 6, 7, 8 };
         var arr3 = [_]i32{ 2, 3, 4, 5, 6, 7, 8, 9 };
 
@@ -248,11 +248,14 @@ pub fn main() !void {
     }
     {
         h2("immutable dereference");
-        var num: i32 = 20;
-        var ptr: *const i32 = &num;
+        var num1: i32 = 10;
+        var num2: i32 = 20;
+        var ptr: *const i32 = &num1;
         //       ^^^^^^ --> immutable dereference
         //                  ptr.* = 1; <-- this is compile time error
-        console.printf("num: {d}\n", .{ptr.*});
+        console.printf("ptr.*: {d}\n", .{ptr.*});
+        ptr = &num2;
+        console.printf("ptr.*: {d}\n", .{ptr.*});
     }
     {
         h2("heap allocation");
@@ -287,9 +290,9 @@ pub fn main() !void {
         }
 
         blk: {
-            var ptr = opt_ptr orelse break :blk;
-            //                ^^^^^^ --> it returns unwrapped valur if the value is not null
-            //                           https://ziglang.org/documentation/master/#Optionals
+            const ptr = opt_ptr orelse break :blk;
+            //                  ^^^^^^ --> it returns unwrapped valur if the value is not null
+            //                             https://ziglang.org/documentation/master/#Optionals
             ptr.* += 10;
             console.printf("optional pointer value: {d}\n", .{ptr.*});
         }
@@ -384,7 +387,7 @@ pub fn main() !void {
         // string literals are const slice to null terminated u8 array
         // read more: https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
         // read more: https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
-        var str_lit = "this is a string literal";
+        const str_lit = "this is a string literal";
         console.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
         // (&str_lit[0]).* = 'A'; // <-- this is compile error because it's a const slice
         //                               very nice!
@@ -442,7 +445,7 @@ pub fn main() !void {
         //                                    ^ --> non-exhaustive enum
         //                                          must use `else` in the switch
 
-        var e: MyEnum = .Hello;
+        const e: MyEnum = .Hello;
         switch (e) {
             .Hello => console.printf("{}\n", .{e}),
             .Bye => console.printf("{}\n", .{e}),
@@ -489,12 +492,12 @@ pub fn main() !void {
         h2("tuple");
         // struct without field name can be used as a tuple
         // https://ziglang.org/documentation/master/#Tuples
-        var tuple = .{ @as(i32, 100), "yo" };
+        const tuple = .{ @as(i32, 100), "yo" };
         console.printf("{d}\n", .{tuple[0]});
         console.printf("{s}\n", .{tuple[1]});
 
         // structs can be combined at compiletime
-        var tuple2 = tuple ++ .{"wow"};
+        const tuple2 = tuple ++ .{"wow"};
         console.printf("{d}\n", .{tuple2[0]});
         console.printf("{s}\n", .{tuple2[1]});
         console.printf("{s}\n", .{tuple2[2]});
@@ -507,14 +510,14 @@ pub fn main() !void {
         // * Arrays
         // * Vectors
 
-        var tuple = .{ @as(i32, 10), "hello" };
+        const tuple = .{ @as(i32, 10), "hello" };
         console.printf("{s}\n", .{@typeName(@TypeOf(tuple))});
-        var num, var str = tuple;
+        const num, const str = tuple;
         console.printf("num = {d}\n", .{num});
         console.printf("str = {s}\n", .{str});
 
-        var arr = [_]i32{ 1, 2, 3, 4 };
-        var n1, var n2, _, _ = arr;
+        const arr = [_]i32{ 1, 2, 3, 4 };
+        const n1, const n2, _, _ = arr;
         console.printf("n1 = {d}\n", .{n1});
         console.printf("n2 = {d}\n", .{n2});
     }
@@ -541,28 +544,30 @@ pub fn main() !void {
             .bits = 32,
         } });
 
-        var n: MyInt = 20;
+        const n: MyInt = 20;
         console.printf("{d}\n", .{n});
 
-        // multiple unwrap using refiy type
-        var opt_a: ?i32 = null;
-        var opt_b: ?f32 = 2.2;
-        if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
-            var a, var b = unwrapped;
-            console.println("unwrap success");
-            console.printf("a = {}, b = {}\n", .{ a, b });
-        } else {
-            console.println("unwrap failed");
-        }
+        // TODO: check if this code is works again
+        // error: TODO: implement writeToMemory for type '?f32'
+        // // multiple unwrap using refiy type
+        // var opt_a: ?i32 = null;
+        // const opt_b: ?f32 = 2.2;
+        // if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
+        //     const a, const b = unwrapped;
+        //     console.println("unwrap success");
+        //     console.printf("a = {}, b = {}\n", .{ a, b });
+        // } else {
+        //     console.println("unwrap failed");
+        // }
 
-        opt_a = 10;
-        if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
-            var a, var b = unwrapped;
-            console.println("unwrap success");
-            console.printf("a = {}, b = {}\n", .{ a, b });
-        } else {
-            console.println("unwrap failed");
-        }
+        // opt_a = 10;
+        // if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
+        //     const a, const b = unwrapped;
+        //     console.println("unwrap success");
+        //     console.printf("a = {}, b = {}\n", .{ a, b });
+        // } else {
+        //     console.println("unwrap failed");
+        // }
     }
 
     h1("lambda");
