@@ -588,8 +588,8 @@ pub fn main() !void {
     {
         // init random number generator
         const seed = @as(u64, @intCast(std.time.timestamp()));
-        var rng_impl = std.rand.DefaultPrng.init(seed);
-        const random = rng_impl.random();
+        var rng = std.rand.DefaultPrng.init(seed);
+        const random = rng.random();
 
         for (0..5) |_| {
             const random_num = random.intRangeAtMost(i64, 1, 10); // generate random value
