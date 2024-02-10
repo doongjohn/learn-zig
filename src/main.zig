@@ -10,8 +10,10 @@ const os = std.os;
 
 const console = struct {
     // cross compile to windows: zig build -Dtarget=x86_64-windows
-    // windows console api (easy c interop!)
+
     const WINAPI: std.builtin.CallingConvention = if (native_arch == .x86) .Stdcall else .C;
+
+    // windows console api (easy c interop!)
     extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
     extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 
@@ -41,9 +43,9 @@ const console = struct {
         stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {!}", .{err});
     }
 
-    const input_max = 32768;
-    var input_buf: [input_max]u8 = undefined;
-    var input_buf_utf16: [input_max]u16 = undefined;
+    const input_size = 10000;
+    var input_buf: [input_size]u8 = undefined;
+    var input_buf_utf16: [input_size]u16 = undefined;
 
     /// this function uses single global buffer for the input!
     /// please copy the result if you want to keep the result
@@ -54,7 +56,7 @@ const console = struct {
                 @memset(&input_buf_utf16, 0);
 
                 var readCount: u32 = undefined;
-                if (!ReadConsoleW(stdin_handle, &input_buf_utf16, input_max, &readCount, null))
+                if (!ReadConsoleW(stdin_handle, &input_buf_utf16, input_size, &readCount, null))
                     return error.ReadConsoleFailed;
 
                 const len = try std.unicode.utf16leToUtf8(&input_buf, input_buf_utf16[0..readCount]);
@@ -572,16 +574,15 @@ pub fn main() !void {
 
     h1("lambda");
     {
-        const TestLambda = struct {
-            data: i32,
-
-            fn func(self: @This()) void {
-                console.printf("this is lambda, data = {d}\n", .{self.data});
-            }
-        };
-
         const a = 100;
-        testLambdaCaller(TestLambda{ .data = a });
+
+        testClosureFunction(struct {
+            a: i32 = a,
+
+            fn func(closure: @This()) void {
+                console.printf("this is lambda, data = {d}\n", .{closure.a});
+            }
+        }{});
     }
 
     h1("random");
@@ -656,7 +657,7 @@ fn Point2d() type {
     };
 }
 
-fn testLambdaCaller(lambda: anytype) void {
+fn testClosureFunction(lambda: anytype) void {
     if (@TypeOf(@TypeOf(lambda).func) != fn (self: @TypeOf(lambda)) void)
         @compileError("lambda must have a function `fn func(self)`");
 
