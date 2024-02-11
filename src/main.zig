@@ -43,35 +43,28 @@ const console = struct {
         stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {!}", .{err});
     }
 
-    const input_size = 10000;
-    var input_buf: [input_size]u8 = undefined;
-    var input_buf_utf16: [input_size]u16 = undefined;
+    const line_buf_size = 10000;
+    var utf8_line_buf: [line_buf_size]u8 = undefined;
+    var utf16_line_buf: [line_buf_size]u16 = undefined;
 
     /// this function uses single global buffer for the input!
     /// please copy the result if you want to keep the result
     pub fn readLine() ![]const u8 {
         switch (builtin.os.tag) {
             .windows => {
-                @memset(&input_buf, 0);
-                @memset(&input_buf_utf16, 0);
-
-                var readCount: u32 = undefined;
-                if (!ReadConsoleW(stdin_handle, &input_buf_utf16, input_size, &readCount, null))
+                var utf16_read_count: u32 = undefined;
+                if (!ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
                     return error.ReadConsoleFailed;
 
-                const len = try std.unicode.utf16leToUtf8(&input_buf, input_buf_utf16[0..readCount]);
-                //                          ^^^^^^^^^^^^^
-                //                          └> windows uses utf16 internally so you need to convert it to utf8 to
-                //                             make it friendly for zig std library
-                return mem.trimRight(u8, input_buf[0..len], "\r\n");
-                //                                           ^^^^ --> trim windows '\r\n'
+                const utf8_len = try std.unicode.utf16leToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
+                //                               ^^^^^^^^^^^^^
+                //                               └> windows uses utf16 internally so you need to convert it to utf8 to
+                //                                  make it friendly for zig std library
+                return mem.trimRight(u8, utf8_line_buf[0..utf8_len], "\r\n");
+                //                                                    ^^^^ --> trim windows '\r\n'
             },
             else => {
-                @memset(&input_buf, 0);
-
-                return try stdin.readUntilDelimiter(&input_buf, '\n');
-                //               ^^^^^^^^^^^^^^^^^^
-                //               └> Can't read unicode from windows console! (use windows ReadConsoleW api)
+                return mem.trimRight(u8, try stdin.readUntilDelimiter(&utf8_line_buf, '\n'), "\n");
             },
         }
     }
