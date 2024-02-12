@@ -1,19 +1,18 @@
 // https://ziglang.org/documentation/master/
 // https://www.openmymind.net/Zig-Quirks/
+// cross compile to windows: zig build -Dtarget=x86_64-windows
 
 const builtin = @import("builtin");
-const native_arch = builtin.cpu.arch;
+const cpu = builtin.cpu;
+
+const WINAPI: std.builtin.CallingConvention = if (cpu.arch == .x86) .Stdcall else .C;
 
 const std = @import("std");
 const mem = std.mem;
 const os = std.os;
 
 const console = struct {
-    // cross compile to windows: zig build -Dtarget=x86_64-windows
-
-    const WINAPI: std.builtin.CallingConvention = if (native_arch == .x86) .Stdcall else .C;
-
-    // windows console api (easy c interop!)
+    // windows api (easy c interop!)
     extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
     extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 
@@ -26,7 +25,7 @@ const console = struct {
         stdin = std.io.getStdIn().reader();
         stdin_handle = std.io.getStdIn().handle;
         if (comptime builtin.os.tag == .windows) {
-            _ = SetConsoleOutputCP(65001);
+            _ = SetConsoleOutputCP(65001); // UTF8
         }
     }
 
@@ -58,7 +57,7 @@ const console = struct {
 
                 const utf8_len = try std.unicode.utf16leToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
                 //                               ^^^^^^^^^^^^^
-                //                               └> windows uses utf16 internally so you need to convert it to utf8 to
+                //                               └> windows uses utf16 so you need to convert it to utf8 to
                 //                                  make it friendly for zig std library
                 return mem.trimRight(u8, utf8_line_buf[0..utf8_len], "\r\n");
                 //                                                    ^^^^ --> trim windows '\r\n'
@@ -84,11 +83,9 @@ pub fn main() !void {
     defer std.debug.assert(gpa.deinit() == .ok); // detect memory leak
     const galloc = gpa.allocator();
 
-    // use c allocator for valgrind
-    // (you need to link libc to use this)
+    // use a c allocator for valgrind (you need to link libc for this)
     // const galloc = std.heap.c_allocator;
 
-    // init terminal io
     console.init();
 
     h1("terminal io");
@@ -544,6 +541,7 @@ pub fn main() !void {
 
         // TODO: check if this code is works again
         // error: TODO: implement writeToMemory for type '?f32'
+
         // // multiple unwrap using refiy type
         // var opt_a: ?i32 = null;
         // const opt_b: ?f32 = 2.2;
@@ -565,7 +563,7 @@ pub fn main() !void {
         // }
     }
 
-    h1("lambda");
+    h1("closure function");
     {
         const a = 100;
 
@@ -650,11 +648,11 @@ fn Point2d() type {
     };
 }
 
-fn testClosureFunction(lambda: anytype) void {
-    if (@TypeOf(@TypeOf(lambda).func) != fn (self: @TypeOf(lambda)) void)
-        @compileError("lambda must have a function `fn func(self)`");
+fn testClosureFunction(closure_fn: anytype) void {
+    if (@TypeOf(@TypeOf(closure_fn).func) != fn (_: @TypeOf(closure_fn)) void)
+        @compileError("closure_fn must have a function `fn func(closure: @This)`");
 
-    lambda.func();
+    closure_fn.func();
 }
 
 fn returnErrorInner(return_error: bool) !void {
