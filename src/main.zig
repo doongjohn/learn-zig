@@ -5,7 +5,7 @@
 const builtin = @import("builtin");
 const cpu = builtin.cpu;
 
-const WINAPI = if (cpu.arch == .x86) .Stdcall else .C;
+const WINAPI: std.builtin.CallingConvention = if (cpu.arch == .x86) .Stdcall else .C;
 
 const std = @import("std");
 const mem = std.mem;
