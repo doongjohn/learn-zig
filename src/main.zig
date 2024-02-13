@@ -5,13 +5,13 @@
 const builtin = @import("builtin");
 const cpu = builtin.cpu;
 
-const WINAPI: std.builtin.CallingConvention = if (cpu.arch == .x86) .Stdcall else .C;
+const WINAPI = if (cpu.arch == .x86) .Stdcall else .C;
 
 const std = @import("std");
 const mem = std.mem;
 const os = std.os;
 
-const Console = struct {
+const console = struct {
     // windows api (easy c interop!)
     extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
     extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
@@ -70,11 +70,11 @@ const Console = struct {
 };
 
 pub fn h1(comptime text: []const u8) void {
-    Console.println("\n\x1b[;92m" ++ "# " ++ text ++ "\x1b[0m");
+    console.println("\n\x1b[;92m" ++ "# " ++ text ++ "\x1b[0m");
 }
 
 pub fn h2(comptime text: []const u8) void {
-    Console.println("\n\x1b[;32m" ++ "## " ++ text ++ "\x1b[0m");
+    console.println("\n\x1b[;32m" ++ "## " ++ text ++ "\x1b[0m");
 }
 
 pub fn main() !void {
@@ -86,19 +86,19 @@ pub fn main() !void {
     // use a c allocator for valgrind (you need to link libc for this)
     // const galloc = std.heap.c_allocator;
 
-    Console.init();
+    console.init();
 
     h1("terminal io");
     {
-        Console.print(">> terminal input: ");
-        const raw_input = try Console.readLine();
-        Console.printf("raw_input = {s}\n", std.fmt.fmtSliceEscapeLower(raw_input));
+        console.print(">> terminal input: ");
+        const raw_input = try console.readLine();
+        console.printf("raw_input = {s}\n", std.fmt.fmtSliceEscapeLower(raw_input));
 
         const trimmed_input = mem.trim(u8, raw_input, "\t ");
         //                                             ^^^ --> trim whitespace
-        Console.printf("trimmed_input = {s}\n", .{trimmed_input});
-        Console.printf("byte length = {d}\n", .{trimmed_input.len});
-        Console.printf("unicode length = {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed_input)});
+        console.printf("trimmed_input = {s}\n", .{trimmed_input});
+        console.printf("byte length = {d}\n", .{trimmed_input.len});
+        console.printf("unicode length = {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed_input)});
     }
 
     h1("variable");
@@ -106,11 +106,11 @@ pub fn main() !void {
         const n: u8 = 0b0000_0_1_01;
         //            ^^^^^^^^^^^^^ --> "_" can be used anywhere in a
         //                            numeric literal for better readability
-        Console.printf("{d}\n", .{n});
+        console.printf("{d}\n", .{n});
 
         const imm = 10;
         // imm = 100; // <-- error: cannot assign to constant
-        Console.printf("{d}\n", .{imm});
+        console.printf("{d}\n", .{imm});
     }
 
     h1("block");
@@ -125,7 +125,7 @@ pub fn main() !void {
                 break :some_block "hello";
             }
         };
-        Console.println(some_text);
+        console.println(some_text);
     }
 
     h1("loop");
@@ -136,27 +136,27 @@ pub fn main() !void {
         i = 0;
         while (i < 5) {
             defer i += 1;
-            Console.printf("{d} ", .{i});
+            console.printf("{d} ", .{i});
         }
-        Console.printf("while end: i = {d}\n", .{i});
-        Console.println("");
+        console.printf("while end: i = {d}\n", .{i});
+        console.println("");
 
         i = 0;
         while (i < 5) : (i += 1) {
-            Console.printf("{d} ", .{i});
+            console.printf("{d} ", .{i});
         }
-        Console.printf("while end: i = {d}\n", .{i});
-        Console.println("");
+        console.printf("while end: i = {d}\n", .{i});
+        console.println("");
 
         i = 0;
         while (i < 5) : ({
-            Console.print("(while : ())\n");
+            console.print("(while : ())\n");
             i += 1;
         }) {
-            defer Console.print("(defer) ");
-            Console.printf("while body: {d} ", .{i});
+            defer console.print("(defer) ");
+            console.printf("while body: {d} ", .{i});
         }
-        Console.printf("while end: i = {d}\n", .{i});
+        console.printf("while end: i = {d}\n", .{i});
     }
     {
         h2("for loop");
@@ -164,25 +164,25 @@ pub fn main() !void {
 
         // range
         for (0..5) |i| { // 0 ~ 4
-            Console.printf("{} ", .{i});
+            console.printf("{} ", .{i});
         }
-        Console.println("");
+        console.println("");
 
         // get element
         for (string) |byte| {
-            Console.printf("{c} ", .{byte});
+            console.printf("{c} ", .{byte});
         }
-        Console.println("");
+        console.println("");
 
         // get index
         for (string, 0..) |_, index| {
-            Console.printf("{d} ", .{index});
+            console.printf("{d} ", .{index});
         }
-        Console.println("");
+        console.println("");
 
         // get element and index
         for (string, 0..) |byte, index| {
-            Console.printf("string[{d}]: {c}\n", .{ index, byte });
+            console.printf("string[{d}]: {c}\n", .{ index, byte });
         }
 
         // multi-object for loop
@@ -191,14 +191,14 @@ pub fn main() !void {
         var arr3 = [_]i32{ 2, 3, 4, 5, 6, 7, 8, 9 };
 
         for (arr1, arr2[0..6], arr3[0..6]) |item1, item2, item3| {
-            Console.printf("arr1: {d}, arr2: {d} arr3: {d}\n", .{ item1, item2, item3 });
+            console.printf("arr1: {d}, arr2: {d} arr3: {d}\n", .{ item1, item2, item3 });
         }
     }
     {
         h2("for else");
 
         const string1 = "hello world";
-        Console.printf("find w in {s}\n", .{string1});
+        console.printf("find w in {s}\n", .{string1});
         const w1 = for (string1) |byte| {
             if (byte == 'w') {
                 break byte;
@@ -207,11 +207,11 @@ pub fn main() !void {
             // this runs when a for loop didn't break
             break :blk 'x';
         };
-        Console.printf("found: {c}\n", .{w1});
+        console.printf("found: {c}\n", .{w1});
 
         const string2 = "hello";
-        Console.printf("find w in {s}\n", .{string2});
-        Console.println("if w is not found: return \'x\'");
+        console.printf("find w in {s}\n", .{string2});
+        console.println("if w is not found: return \'x\'");
         const w2 = for (string2) |byte| {
             if (byte == 'w') {
                 break byte;
@@ -220,14 +220,14 @@ pub fn main() !void {
             // this runs when a for loop didn't break
             break :blk 'x';
         };
-        Console.printf("found: {c}\n", .{w2});
+        console.printf("found: {c}\n", .{w2});
     }
 
     h1("pointer");
     {
         h2("basic pointer");
         var num: i32 = 10;
-        Console.printf("num: {d}\n", .{num});
+        console.printf("num: {d}\n", .{num});
 
         var num_ptr: *i32 = undefined;
         //           ^^^^ --> pointer type
@@ -236,7 +236,7 @@ pub fn main() !void {
         num_ptr.* += 5;
         //     ^^ --> dereference pointer
 
-        Console.printf("num: {d}\n", .{num});
+        console.printf("num: {d}\n", .{num});
     }
     {
         h2("immutable dereference");
@@ -245,9 +245,9 @@ pub fn main() !void {
         var ptr: *const i32 = &num1;
         //       ^^^^^^ --> immutable dereference
         //                  ptr.* = 1; <-- this is compile time error
-        Console.printf("ptr.*: {d}\n", .{ptr.*});
+        console.printf("ptr.*: {d}\n", .{ptr.*});
         ptr = &num2;
-        Console.printf("ptr.*: {d}\n", .{ptr.*});
+        console.printf("ptr.*: {d}\n", .{ptr.*});
     }
     {
         h2("heap allocation");
@@ -257,7 +257,7 @@ pub fn main() !void {
         //           ^^^^^^^ --> deallocates a single item
 
         heap_int.* = 100;
-        Console.printf("num: {d}\n", .{heap_int.*});
+        console.printf("num: {d}\n", .{heap_int.*});
     }
     {
         h2("optional(nullable) pointer");
@@ -270,15 +270,15 @@ pub fn main() !void {
 
         opt_ptr.?.* = 100;
         //     ^^ --> unwraps optional (runtime error if null)
-        Console.printf("optional pointer value: {d}\n", .{opt_ptr.?.*});
+        console.printf("optional pointer value: {d}\n", .{opt_ptr.?.*});
 
         if (opt_ptr) |ptr| {
             //        ^^^ --> this is unwrapped ptr and this variable is
             //                only available in this scope
             ptr.* = 10;
-            Console.printf("optional pointer value: {d}\n", .{ptr.*});
+            console.printf("optional pointer value: {d}\n", .{ptr.*});
         } else {
-            Console.println("optional pointer value: null");
+            console.println("optional pointer value: null");
         }
 
         blk: {
@@ -286,7 +286,7 @@ pub fn main() !void {
             //                  ^^^^^^ --> it returns unwrapped valur if the value is not null
             //                             https://ziglang.org/documentation/master/#Optionals
             ptr.* += 10;
-            Console.printf("optional pointer value: {d}\n", .{ptr.*});
+            console.printf("optional pointer value: {d}\n", .{ptr.*});
         }
     }
 
@@ -295,12 +295,12 @@ pub fn main() !void {
         // function pointer
         const f: *const fn () void = haha;
         f();
-        Console.printf("{s}\n", .{@typeName(@TypeOf(f))});
+        console.printf("{s}\n", .{@typeName(@TypeOf(f))});
 
         // function alias
         const f2: fn () void = haha;
         f2();
-        Console.printf("{s}\n", .{@typeName(@TypeOf(f2))});
+        console.printf("{s}\n", .{@typeName(@TypeOf(f2))});
     }
 
     h1("array");
@@ -315,38 +315,38 @@ pub fn main() !void {
             item.* = @as(i64, @intCast(i)) + 1;
             //       ^^^^^^^^^^^^^^^^^^^^^ <-- type of the array index `i` is `usize`
             //                                 so I need to cast it to `i64`
-            Console.printf("[{d}]: {d}\n", .{ i, item.* });
+            console.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
         h2("init array with ** operator");
         const array2 = [_]i64{ 1, 2, 3 } ** 3;
         //                   ^^^^^^^^^^^^^ --> this will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 }
         //                                     at compile time
-        Console.printf("{any}\n", .{array2});
+        console.printf("{any}\n", .{array2});
 
         h2("assigning array to array");
         // array gets copied when assigned
         var arr1 = [_]i32{ 0, 0, 0 };
         var arr2 = arr1;
-        Console.printf("arr1: {p}\n", .{&arr1[0]});
-        Console.printf("arr2: {p}\n", .{&arr2[0]});
+        console.printf("arr1: {p}\n", .{&arr1[0]});
+        console.printf("arr2: {p}\n", .{&arr2[0]});
 
         h2("concat array compile-time");
         const concated = "wow " ++ "hey " ++ "yay";
         //                      ^^ --> compiletime array concatenation operator
-        Console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
 
         h2("slice");
         var arr1_slice = arr1[0..]; // a slice is a pointer and a length (its length is known at runtime)
         //                    ^^^
         //                    └> from index 0 to the end
-        Console.printf("arr1: {p}\n", .{&arr1[0]});
-        Console.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
+        console.printf("arr1: {p}\n", .{&arr1[0]});
+        console.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
         arr1_slice[0] = 10;
         for (arr1_slice, 0..) |item, i| {
-            Console.printf("[{d}]: {d}\n", .{ i, item });
+            console.printf("[{d}]: {d}\n", .{ i, item });
         }
-        Console.printf("arr[0]: {d}\n", .{&arr1[0]});
+        console.printf("arr[0]: {d}\n", .{&arr1[0]});
 
         arr1_slice = &arr1;
         //           ^^^^^
@@ -354,16 +354,16 @@ pub fn main() !void {
 
         h2("pointer to array");
         const arr_ptr = &array; // pointer to an array
-        Console.printf("{s}\n", .{@typeName(@TypeOf(array))});
-        Console.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
+        console.printf("{s}\n", .{@typeName(@TypeOf(array))});
+        console.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
         for (arr_ptr, 0..) |item, i| {
-            Console.printf("[{d}]: {d}\n", .{ i, item });
+            console.printf("[{d}]: {d}\n", .{ i, item });
         }
 
         h2("@memset");
         @memset(&array, 3); // --> set every elements in array to 3
         for (array, 0..) |item, i| {
-            Console.printf("[{d}]: {d}\n", .{ i, item });
+            console.printf("[{d}]: {d}\n", .{ i, item });
         }
     }
     {
@@ -373,14 +373,14 @@ pub fn main() !void {
         // (so handling Unicode is not trivial...)
         var yay = [_]u8{ 'y', 'a', 'y' };
         yay[0] = 'Y';
-        Console.println(yay[0..]);
-        Console.printf("{s}\n", .{@typeName(@TypeOf(yay))});
+        console.println(yay[0..]);
+        console.printf("{s}\n", .{@typeName(@TypeOf(yay))});
 
         // string literals are const slice to null terminated u8 array
         // read more: https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
         // read more: https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
         const str_lit = "this is a string literal";
-        Console.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
+        console.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
         // (&str_lit[0]).* = 'A'; // <-- this is compile error because it's a const slice
         //                               very nice!
 
@@ -390,17 +390,17 @@ pub fn main() !void {
             \\Zig is awesome!
             \\
         ;
-        Console.print(msg);
+        console.print(msg);
     }
     {
         h2("heap allocated array");
-        Console.print(">> array length: ");
+        console.print(">> array length: ");
         var array_length: usize = undefined;
         while (true) {
-            const input = try Console.readLine();
+            const input = try console.readLine();
             // handle error
             array_length = std.fmt.parseInt(usize, input, 10) catch {
-                Console.print(">> please input positive number: ");
+                console.print(">> please input positive number: ");
                 continue;
             };
             break;
@@ -413,13 +413,13 @@ pub fn main() !void {
         for (array, 0..) |*item, i| {
             item.* = @as(i64, @intCast(i));
         }
-        Console.printf("{any}\n", .{array});
+        console.printf("{any}\n", .{array});
 
         h2("concat array run-time");
         const words = [_][]const u8{ "wow ", "hey ", "yay" };
         const concated = try mem.concat(galloc, u8, words[0..]);
         defer galloc.free(concated);
-        Console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
 
         h2("std.ArrayList");
         // string builder like function with ArrayList
@@ -428,7 +428,7 @@ pub fn main() !void {
         try str_builder.appendSlice("wow ");
         try str_builder.appendSlice("this is cool! ");
         try str_builder.appendSlice("super power!");
-        Console.printf("{s}\n", .{str_builder.items});
+        console.printf("{s}\n", .{str_builder.items});
     }
 
     h1("enum");
@@ -439,9 +439,9 @@ pub fn main() !void {
 
         const e: MyEnum = .Hello;
         switch (e) {
-            .Hello => Console.printf("{}\n", .{e}),
-            .Bye => Console.printf("{}\n", .{e}),
-            else => Console.println("other"),
+            .Hello => console.printf("{}\n", .{e}),
+            .Bye => console.printf("{}\n", .{e}),
+            else => console.println("other"),
         }
     }
 
@@ -459,14 +459,14 @@ pub fn main() !void {
         //                            └-> this is necessary because `text` has no default value
         some_struct.num = 10;
         some_struct.text = "hello";
-        Console.printf("some_struct = {}\n", .{some_struct});
-        Console.printf("some_struct.text = {s}\n", .{some_struct.text});
+        console.printf("some_struct = {}\n", .{some_struct});
+        console.printf("some_struct.text = {s}\n", .{some_struct.text});
 
         var point: Point2d() = undefined;
         //         ^^^^^^^^^
         //         └-> function returning a type can be used as a type
         point = Point2d(){ .x = 10, .y = 20 };
-        Console.printf("point = {}\n", .{point});
+        console.printf("point = {}\n", .{point});
 
         // result location semantics
         // https://www.youtube.com/watch?v=dEIsJPpCZYg
@@ -474,25 +474,25 @@ pub fn main() !void {
             .a = 10,
             .b = 20,
         };
-        Console.printf("s: {}\n", .{s});
+        console.printf("s: {}\n", .{s});
         s = .{
             .a = 50, // <-- writes 50 to s.a
             .b = s.a, // <-- writes s.a to s.b so it becomes 50
         };
-        Console.printf("s: {}\n", .{s});
+        console.printf("s: {}\n", .{s});
 
         h2("tuple");
         // struct without field name can be used as a tuple
         // https://ziglang.org/documentation/master/#Tuples
         const tuple = .{ @as(i32, 100), "yo" };
-        Console.printf("{d}\n", .{tuple[0]});
-        Console.printf("{s}\n", .{tuple[1]});
+        console.printf("{d}\n", .{tuple[0]});
+        console.printf("{s}\n", .{tuple[1]});
 
         // structs can be combined at compiletime
         const tuple2 = tuple ++ .{"wow"};
-        Console.printf("{d}\n", .{tuple2[0]});
-        Console.printf("{s}\n", .{tuple2[1]});
-        Console.printf("{s}\n", .{tuple2[2]});
+        console.printf("{d}\n", .{tuple2[0]});
+        console.printf("{s}\n", .{tuple2[1]});
+        console.printf("{s}\n", .{tuple2[2]});
     }
 
     h1("destructuring");
@@ -503,27 +503,27 @@ pub fn main() !void {
         // * Vectors
 
         const tuple = .{ @as(i32, 10), "hello" };
-        Console.printf("{s}\n", .{@typeName(@TypeOf(tuple))});
+        console.printf("{s}\n", .{@typeName(@TypeOf(tuple))});
         const num, const str = tuple;
-        Console.printf("num = {d}\n", .{num});
-        Console.printf("str = {s}\n", .{str});
+        console.printf("num = {d}\n", .{num});
+        console.printf("str = {s}\n", .{str});
 
         const arr = [_]i32{ 1, 2, 3, 4 };
         const n1, const n2, _, _ = arr;
-        Console.printf("n1 = {d}\n", .{n1});
-        Console.printf("n2 = {d}\n", .{n2});
+        console.printf("n1 = {d}\n", .{n1});
+        console.printf("n2 = {d}\n", .{n2});
     }
 
     h1("error & errdefer");
     {
         h2("with error");
         returnError(true) catch |err| {
-            Console.printf("{!}\n", .{err});
+            console.printf("{!}\n", .{err});
         };
 
         h2("without error");
         returnError(false) catch |err| {
-            Console.printf("{!}\n", .{err});
+            console.printf("{!}\n", .{err});
         };
     }
 
@@ -537,7 +537,7 @@ pub fn main() !void {
         } });
 
         const n: MyInt = 20;
-        Console.printf("{d}\n", .{n});
+        console.printf("{d}\n", .{n});
 
         // TODO: check if this code is works again
         // error: TODO: implement writeToMemory for type '?f32'
@@ -571,7 +571,7 @@ pub fn main() !void {
             a: i32 = a,
 
             fn func(closure: @This()) void {
-                Console.printf("this is lambda, data = {d}\n", .{closure.a});
+                console.printf("this is lambda, data = {d}\n", .{closure.a});
             }
         }{});
     }
@@ -585,7 +585,7 @@ pub fn main() !void {
 
         for (0..5) |_| {
             const random_num = random.intRangeAtMost(i64, 1, 10); // generate random value
-            Console.printf("random between 1 ~ 10 => {}\n", .{random_num});
+            console.printf("random between 1 ~ 10 => {}\n", .{random_num});
         }
     }
 }
@@ -666,7 +666,7 @@ fn returnErrorInner(return_error: bool) !void {
 }
 
 fn returnError(return_error: bool) !void {
-    errdefer Console.println("errdefer"); // --> errdefer only gets executed when
+    errdefer console.println("errdefer"); // --> errdefer only gets executed when
     //                                           this function returns an error
 
     try returnErrorInner(return_error); // --> `try` is equal to `someFunc() catch |err| return err;`
