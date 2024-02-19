@@ -1,21 +1,23 @@
 // https://ziglang.org/documentation/master/
 // https://www.openmymind.net/Zig-Quirks/
-// cross compile to windows: zig build -Dtarget=x86_64-windows
 
 const builtin = @import("builtin");
 const cpu = builtin.cpu;
-
-const WINAPI: std.builtin.CallingConvention = if (cpu.arch == .x86) .Stdcall else .C;
 
 const std = @import("std");
 const mem = std.mem;
 const os = std.os;
 
-const console = struct {
+// cross compile to windows: zig build -Dtarget=x86_64-windows
+const winapi = if (builtin.os.tag == .window) struct {
+    const WINAPI: std.builtin.CallingConvention = if (cpu.arch == .x86) .Stdcall else .C;
+
     // windows api (easy c interop!)
     extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
     extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
+};
 
+const console = struct {
     var stdout: std.fs.File.Writer = undefined;
     var stdin: std.fs.File.Reader = undefined;
     var stdin_handle: std.os.fd_t = undefined;
@@ -24,8 +26,9 @@ const console = struct {
         stdout = std.io.getStdOut().writer();
         stdin = std.io.getStdIn().reader();
         stdin_handle = std.io.getStdIn().handle;
-        if (comptime builtin.os.tag == .windows) {
-            _ = SetConsoleOutputCP(65001); // UTF8
+
+        if (builtin.os.tag == .windows) {
+            _ = winapi.SetConsoleOutputCP(65001); // UTF8
         }
     }
 
@@ -52,7 +55,7 @@ const console = struct {
         switch (builtin.os.tag) {
             .windows => {
                 var utf16_read_count: u32 = undefined;
-                if (!ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
+                if (!winapi.ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
                     return error.ReadConsoleError;
 
                 const utf8_len = try std.unicode.utf16leToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
@@ -604,7 +607,7 @@ fn UnwrappedType(comptime T: type) type {
                         unwrapped_fields[i] = .{
                             .name = field.name,
                             .type = field_info.child,
-                            .default_value = field.default_value,
+                            .default_value = field.default_value orelse null,
                             .is_comptime = field.is_comptime,
                             .alignment = 0, // meaningless for `.layout = .Auto`
                         };
