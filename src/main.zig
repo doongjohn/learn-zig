@@ -9,7 +9,7 @@ const mem = std.mem;
 const os = std.os;
 
 // cross compile to windows: zig build -Dtarget=x86_64-windows
-const winapi = if (builtin.os.tag == .window) struct {
+const winapi = if (builtin.os.tag == .windows) struct {
     const WINAPI: std.builtin.CallingConvention = if (cpu.arch == .x86) .Stdcall else .C;
 
     // windows api (easy c interop!)
