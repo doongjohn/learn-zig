@@ -38,7 +38,7 @@ const console = struct {
 
     pub fn println(str: []const u8) void {
         _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {!}", .{err});
-        _ = stdout.write("\n") catch |err| std.debug.panic("stdout.write error: {!}", .{err});
+        _ = stdout.writeByte('\n') catch |err| std.debug.panic("stdout.writeByte error: {!}", .{err});
     }
 
     pub fn printf(comptime format: []const u8, args: anytype) void {
@@ -46,11 +46,11 @@ const console = struct {
     }
 
     const line_buf_size = 10000;
-    var utf8_line_buf: [line_buf_size]u8 = undefined;
-    var utf16_line_buf: [line_buf_size]u16 = undefined;
+    var utf8_line_buf: [line_buf_size]u8 = .{0} ** line_buf_size;
+    var utf16_line_buf: [line_buf_size]u16 = .{0} ** line_buf_size;
 
-    /// this function uses single global buffer for the input!
-    /// please copy the result if you want to keep the result
+    /// this function stores input string in a single buffer
+    /// copy the result if you want to keep the string
     pub fn readLine() ![]const u8 {
         switch (builtin.os.tag) {
             .windows => {
