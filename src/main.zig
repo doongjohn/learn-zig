@@ -94,14 +94,11 @@ pub fn main() !void {
     h1("terminal io");
     {
         console.print(">> terminal input: ");
-        const raw_input = try console.readLine();
-        console.printf("raw_input = {s}\n", std.fmt.fmtSliceEscapeLower(raw_input));
-
-        const trimmed_input = mem.trim(u8, raw_input, "\t ");
-        //                                             ^^^ --> trim whitespace
-        console.printf("trimmed_input = {s}\n", .{trimmed_input});
-        console.printf("byte length = {d}\n", .{trimmed_input.len});
-        console.printf("unicode length = {d}\n", .{try std.unicode.utf8CountCodepoints(trimmed_input)});
+        const input = mem.trim(u8, try console.readLine(), " \t");
+        //                                                  ^^^ --> trim whitespace
+        console.printf("input = {s}\n", .{input});
+        console.printf("byte length = {d}\n", .{input.len});
+        console.printf("unicode length = {d}\n", .{try std.unicode.utf8CountCodepoints(input)});
     }
 
     h1("variable");
