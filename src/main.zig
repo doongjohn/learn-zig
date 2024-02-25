@@ -9,18 +9,20 @@ const mem = std.mem;
 const os = std.os;
 
 // cross compile to windows: zig build -Dtarget=x86_64-windows
-const winapi = if (builtin.os.tag == .windows) struct {
-    const WINAPI: std.builtin.CallingConvention = if (cpu.arch == .x86) .Stdcall else .C;
+const kernel32 = if (builtin.os.tag == .windows) struct {
+    const win = std.os.windows;
 
     // windows api (easy c interop!)
-    extern "kernel32" fn SetConsoleOutputCP(cp: os.windows.UINT) callconv(WINAPI) bool;
-    extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: os.windows.DWORD, read: *os.windows.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
+    extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(win.WINAPI) bool;
 };
 
 const console = struct {
     var stdout: std.fs.File.Writer = undefined;
     var stdin: std.fs.File.Reader = undefined;
-    var stdin_handle: std.os.fd_t = undefined;
+    var stdin_handle: os.fd_t = undefined;
+
+    var orig_outputcp: if (builtin.os.tag == .windows)
+        os.windows.UINT = undefined;
 
     pub fn init() void {
         stdout = std.io.getStdOut().writer();
@@ -28,7 +30,14 @@ const console = struct {
         stdin_handle = std.io.getStdIn().handle;
 
         if (builtin.os.tag == .windows) {
-            _ = winapi.SetConsoleOutputCP(65001); // UTF8
+            orig_outputcp = os.windows.kernel32.GetConsoleOutputCP();
+            _ = os.windows.kernel32.SetConsoleOutputCP(65001); // UTF8
+        }
+    }
+
+    pub fn deinit() void {
+        if (builtin.os.tag == .windows) {
+            _ = os.windows.kernel32.SetConsoleOutputCP(orig_outputcp);
         }
     }
 
@@ -55,7 +64,7 @@ const console = struct {
         switch (builtin.os.tag) {
             .windows => {
                 var utf16_read_count: u32 = undefined;
-                if (!winapi.ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
+                if (!kernel32.ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
                     return error.ReadConsoleError;
 
                 const utf8_len = try std.unicode.utf16leToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
@@ -81,15 +90,16 @@ pub fn h2(comptime text: []const u8) void {
 }
 
 pub fn main() !void {
+    // use a c allocator for valgrind (you need to link libc for this)
+    // const alloc = std.heap.c_allocator;
+
     // init general purpose allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(gpa.deinit() == .ok); // detect memory leak
-    const galloc = gpa.allocator();
-
-    // use a c allocator for valgrind (you need to link libc for this)
-    // const galloc = std.heap.c_allocator;
+    const alloc = gpa.allocator();
 
     console.init();
+    defer console.deinit();
 
     h1("terminal io");
     {
@@ -251,9 +261,9 @@ pub fn main() !void {
     }
     {
         h2("heap allocation");
-        const heap_int = try galloc.create(i32);
+        const heap_int = try alloc.create(i32);
         //                          ^^^^^^ --> allocates a single item
-        defer galloc.destroy(heap_int);
+        defer alloc.destroy(heap_int);
         //           ^^^^^^^ --> deallocates a single item
 
         heap_int.* = 100;
@@ -265,8 +275,8 @@ pub fn main() !void {
         //           ^ --> optional type (null is allowed)
         //                 it is zero cost for the pointer
 
-        opt_ptr = try galloc.create(i32);
-        defer if (opt_ptr) |ptr| galloc.destroy(ptr);
+        opt_ptr = try alloc.create(i32);
+        defer if (opt_ptr) |ptr| alloc.destroy(ptr);
 
         opt_ptr.?.* = 100;
         //     ^^ --> unwraps optional (runtime error if null)
@@ -406,9 +416,9 @@ pub fn main() !void {
             break;
         }
 
-        const array = try galloc.alloc(i64, array_length);
+        const array = try alloc.alloc(i64, array_length);
         //                       ^^^^^ --> allocate array
-        defer galloc.free(array);
+        defer alloc.free(array);
         //           ^^^^ --> deallocate array
         for (array, 0..) |*item, i| {
             item.* = @as(i64, @intCast(i));
@@ -417,13 +427,13 @@ pub fn main() !void {
 
         h2("concat array run-time");
         const words = [_][]const u8{ "wow ", "hey ", "yay" };
-        const concated = try mem.concat(galloc, u8, words[0..]);
-        defer galloc.free(concated);
+        const concated = try mem.concat(alloc, u8, words[0..]);
+        defer alloc.free(concated);
         console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
 
         h2("std.ArrayList");
         // string builder like function with ArrayList
-        var str_builder = std.ArrayList(u8).init(galloc);
+        var str_builder = std.ArrayList(u8).init(alloc);
         defer str_builder.deinit();
         try str_builder.appendSlice("wow ");
         try str_builder.appendSlice("this is cool! ");
