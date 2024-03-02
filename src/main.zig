@@ -658,11 +658,11 @@ fn Point2d() type {
     };
 }
 
-fn testClosureFunction(closure_fn: anytype) void {
-    if (@TypeOf(@TypeOf(closure_fn).func) != fn (_: @TypeOf(closure_fn)) void)
-        @compileError("closure_fn must have a function `fn func(closure: @This)`");
-
-    closure_fn.func();
+fn testClosureFunction(fn_closure: anytype) void {
+    if (@TypeOf(@TypeOf(fn_closure).func) != fn (_: @TypeOf(fn_closure)) void) {
+        @compileError("fn_closure must have a function `fn func(closure: @This)`");
+    }
+    fn_closure.func();
 }
 
 fn returnErrorInner(return_error: bool) !void {
