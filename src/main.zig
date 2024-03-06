@@ -577,7 +577,7 @@ pub fn main() !void {
     {
         const a = 100;
 
-        testClosureFunction(struct {
+        runClosure(struct {
             a: i32 = a,
 
             fn func(closure: @This()) void {
@@ -658,7 +658,7 @@ fn Point2d() type {
     };
 }
 
-fn testClosureFunction(fn_closure: anytype) void {
+fn runClosure(fn_closure: anytype) void {
     if (@TypeOf(@TypeOf(fn_closure).func) != fn (_: @TypeOf(fn_closure)) void) {
         @compileError("fn_closure must have a function `fn func(closure: @This)`");
     }
