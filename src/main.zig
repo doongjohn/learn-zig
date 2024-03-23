@@ -7,19 +7,20 @@ const cpu = builtin.cpu;
 const std = @import("std");
 const mem = std.mem;
 const os = std.os;
+const fs = std.fs;
 
 // cross compile to windows: zig build -Dtarget=x86_64-windows
 const kernel32 = if (builtin.os.tag == .windows) struct {
     const win = std.os.windows;
 
     // windows api (easy c interop!)
-    extern "kernel32" fn ReadConsoleW(handle: std.fs.File.Handle, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(win.WINAPI) bool;
+    extern "kernel32" fn ReadConsoleW(handle: fs.File.Handle, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(win.WINAPI) bool;
 };
 
 const console = struct {
-    var stdout: std.fs.File.Writer = undefined;
-    var stdin: std.fs.File.Reader = undefined;
-    var stdin_handle: std.fs.File.Handle = undefined;
+    var stdout: fs.File.Writer = undefined;
+    var stdin: fs.File.Reader = undefined;
+    var stdin_handle: fs.File.Handle = undefined;
 
     var orig_outputcp: if (builtin.os.tag == .windows)
         os.windows.UINT = undefined;
