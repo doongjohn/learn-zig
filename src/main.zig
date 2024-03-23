@@ -13,13 +13,13 @@ const kernel32 = if (builtin.os.tag == .windows) struct {
     const win = std.os.windows;
 
     // windows api (easy c interop!)
-    extern "kernel32" fn ReadConsoleW(handle: os.fd_t, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(win.WINAPI) bool;
+    extern "kernel32" fn ReadConsoleW(handle: std.fs.File.Handle, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(win.WINAPI) bool;
 };
 
 const console = struct {
     var stdout: std.fs.File.Writer = undefined;
     var stdin: std.fs.File.Reader = undefined;
-    var stdin_handle: os.fd_t = undefined;
+    var stdin_handle: std.fs.File.Handle = undefined;
 
     var orig_outputcp: if (builtin.os.tag == .windows)
         os.windows.UINT = undefined;
@@ -540,7 +540,7 @@ pub fn main() !void {
     h1("refiy type");
     {
         // type can be created at compile-time
-        // https://github.com/ziglang/zig/blob/61b70778bdf975957d45432987dde16029aca69a/lib/std/builtin.zig#L228
+        // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L256
         const MyInt = @Type(.{ .Int = .{
             .signedness = .signed,
             .bits = 32,
@@ -625,7 +625,7 @@ fn UnwrappedType(comptime T: type) type {
 
             return @Type(.{
                 .Struct = .{
-                    .layout = .Auto,
+                    .layout = .auto,
                     .fields = &unwrapped_fields,
                     .decls = &.{},
                     .is_tuple = true,
