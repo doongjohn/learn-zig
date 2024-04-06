@@ -550,28 +550,25 @@ pub fn main() !void {
         const n: MyInt = 20;
         console.printf("{d}\n", .{n});
 
-        // TODO: check if this code is works again
-        // error: TODO: implement writeToMemory for type '?f32'
+        // multiple unwrap using refiy type
+        var opt_a: ?i32 = null;
+        const opt_b: ?f32 = 2.2;
+        if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
+            const a, const b = unwrapped;
+            console.println("unwrap success");
+            console.printf("a = {}, b = {}\n", .{ a, b });
+        } else {
+            console.println("unwrap failed");
+        }
 
-        // // multiple unwrap using refiy type
-        // var opt_a: ?i32 = null;
-        // const opt_b: ?f32 = 2.2;
-        // if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
-        //     const a, const b = unwrapped;
-        //     console.println("unwrap success");
-        //     console.printf("a = {}, b = {}\n", .{ a, b });
-        // } else {
-        //     console.println("unwrap failed");
-        // }
-
-        // opt_a = 10;
-        // if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
-        //     const a, const b = unwrapped;
-        //     console.println("unwrap success");
-        //     console.printf("a = {}, b = {}\n", .{ a, b });
-        // } else {
-        //     console.println("unwrap failed");
-        // }
+        opt_a = 10;
+        if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
+            const a, const b = unwrapped;
+            console.println("unwrap success");
+            console.printf("a = {}, b = {}\n", .{ a, b });
+        } else {
+            console.println("unwrap failed");
+        }
     }
 
     h1("closure function");
@@ -606,24 +603,24 @@ fn haha() void {
 }
 
 fn UnwrappedType(comptime T: type) type {
+    const StructField = std.builtin.Type.StructField;
     switch (@typeInfo(T)) {
         .Struct => |struct_info| {
-            var unwrapped_fields: [struct_info.fields.len]std.builtin.Type.StructField = undefined;
+            var unwrapped_fields: [struct_info.fields.len]StructField = undefined;
             inline for (struct_info.fields, 0..) |field, i| {
                 switch (@typeInfo(field.type)) {
                     .Optional => |field_info| {
                         unwrapped_fields[i] = .{
                             .name = field.name,
                             .type = field_info.child,
-                            .default_value = field.default_value orelse null,
-                            .is_comptime = field.is_comptime,
-                            .alignment = 0, // meaningless for `.layout = .Auto`
+                            .default_value = null,
+                            .is_comptime = false,
+                            .alignment = 0, // meaningless for `.layout = .auto`
                         };
                     },
                     else => @compileError("all fields must be optional type!"),
                 }
             }
-
             return @Type(.{
                 .Struct = .{
                     .layout = .auto,
