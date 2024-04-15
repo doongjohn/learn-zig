@@ -12,9 +12,10 @@ const fs = std.fs;
 // cross compile to windows: zig build -Dtarget=x86_64-windows
 const kernel32 = if (builtin.os.tag == .windows) struct {
     const win = std.os.windows;
+    const WINAPI = win.WINAPI;
 
     // windows api (easy c interop!)
-    extern "kernel32" fn ReadConsoleW(handle: fs.File.Handle, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(win.WINAPI) bool;
+    extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 };
 
 const console = struct {
