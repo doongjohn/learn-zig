@@ -313,6 +313,14 @@ pub fn main() !void {
         const f2: fn () void = haha;
         f2();
         console.printf("{s}\n", .{@typeName(@TypeOf(f2))});
+
+        // nested function
+        const nested_fn = struct {
+            fn func() void {
+                console.println("nested fn");
+            }
+        };
+        nested_fn.func();
     }
 
     h1("array");
