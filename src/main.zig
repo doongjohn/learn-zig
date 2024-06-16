@@ -582,15 +582,21 @@ pub fn main() !void {
 
     h1("closure function");
     {
-        const a = 100;
+        var a: i32 = 100;
 
         runClosure(struct {
-            a: i32 = a,
+            a: *i32,
 
             fn func(closure: @This()) void {
-                console.printf("this is lambda, data = {d}\n", .{closure.a});
+                console.printf("this is a closure: a = {d}\n", .{closure.a.*});
+                closure.a.* += 100;
+                console.printf("this is a closure: a = {d}\n", .{closure.a.*});
             }
-        }{});
+        }{
+            .a = &a,
+        });
+
+        console.printf("a = {d}\n", .{a});
     }
 
     h1("random");
@@ -665,11 +671,34 @@ fn Point2d() type {
     };
 }
 
-fn runClosure(fn_closure: anytype) void {
-    if (@TypeOf(@TypeOf(fn_closure).func) != fn (_: @TypeOf(fn_closure)) void) {
-        @compileError("fn_closure must have a function `fn func(closure: @This)`");
+fn typeConstraintClosure(closure: anytype) void {
+    const err_msg = "closure must be a struct that has a function `fn func(closure: @This)`";
+    const Closure = @TypeOf(closure);
+    switch (@typeInfo(Closure)) {
+        .Struct => {
+            if (!@hasDecl(Closure, "func")) {
+                @compileError(err_msg);
+            }
+        },
+        else => {
+            @compileError(err_msg);
+        },
     }
-    fn_closure.func();
+    switch (@typeInfo(@TypeOf(Closure.func))) {
+        .Fn => |func_info| {
+            if (func_info.params.len != 1 or func_info.params[0].type != Closure) {
+                @compileError(err_msg);
+            }
+        },
+        else => {
+            @compileError(err_msg);
+        },
+    }
+}
+
+fn runClosure(closure: anytype) void {
+    typeConstraintClosure(closure);
+    closure.func();
 }
 
 fn returnErrorInner(return_error: bool) !void {
