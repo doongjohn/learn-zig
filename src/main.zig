@@ -69,7 +69,7 @@ const console = struct {
                 if (!kernel32.ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
                     return error.ReadConsoleError;
 
-                const utf8_len = try std.unicode.utf16leToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
+                const utf8_len = try std.unicode.utf16LeToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
                 //                               ^^^^^^^^^^^^^
                 //                               └> windows uses utf16 so you need to convert it to utf8 to
                 //                                  make it friendly for zig std library
