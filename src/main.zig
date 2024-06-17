@@ -603,7 +603,7 @@ pub fn main() !void {
     {
         // init random number generator
         const seed = @as(u64, @intCast(std.time.timestamp()));
-        var rng = std.rand.DefaultPrng.init(seed);
+        var rng = std.Random.DefaultPrng.init(seed);
         const random = rng.random();
 
         for (0..5) |_| {
