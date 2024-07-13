@@ -10,7 +10,7 @@ const os = std.os;
 const fs = std.fs;
 
 // cross compile to windows: zig build -Dtarget=x86_64-windows
-const kernel32 = if (builtin.os.tag == .windows) struct {
+const win32 = if (builtin.os.tag == .windows) struct {
     const win = std.os.windows;
     const WINAPI = win.WINAPI;
 
@@ -66,7 +66,7 @@ const console = struct {
         switch (builtin.os.tag) {
             .windows => {
                 var utf16_read_count: u32 = undefined;
-                if (!kernel32.ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
+                if (!win32.ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
                     return error.ReadConsoleError;
 
                 const utf8_len = try std.unicode.utf16LeToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
