@@ -173,7 +173,7 @@ pub fn main() !void {
     }
     {
         h2("for loop");
-        const string = "Hello world!";
+        const string = "Hello, world!";
 
         // range
         for (0..5) |i| { // 0 ~ 4
@@ -210,7 +210,7 @@ pub fn main() !void {
     {
         h2("for else");
 
-        const string1 = "hello world";
+        const string1 = "Hello, world";
         console.printf("find w in {s}\n", .{string1});
         const w1 = for (string1) |byte| {
             if (byte == 'w') {
