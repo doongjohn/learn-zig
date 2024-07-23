@@ -1,5 +1,6 @@
 // https://ziglang.org/documentation/master/
 // https://www.openmymind.net/Zig-Quirks/
+// https://ziggit.dev/t/build-system-tricks/3531
 
 const builtin = @import("builtin");
 const cpu = builtin.cpu;
