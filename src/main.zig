@@ -588,7 +588,7 @@ pub fn main() !void {
         runClosure(struct {
             a: *i32,
 
-            fn func(closure: @This()) void {
+            fn call(closure: @This()) void {
                 console.printf("this is a closure: a = {d}\n", .{closure.a.*});
                 closure.a.* += 100;
                 console.printf("this is a closure: a = {d}\n", .{closure.a.*});
@@ -673,11 +673,11 @@ fn Point2d() type {
 }
 
 fn typeConstraintClosure(closure: anytype) void {
-    const err_msg = "closure must be a struct that has a function `fn func(closure: @This)`";
+    const err_msg = "closure must be a struct that has a function `fn call(closure: @This)`";
     const Closure = @TypeOf(closure);
     switch (@typeInfo(Closure)) {
         .Struct => {
-            if (!@hasDecl(Closure, "func")) {
+            if (!@hasDecl(Closure, "call")) {
                 @compileError(err_msg);
             }
         },
@@ -685,7 +685,7 @@ fn typeConstraintClosure(closure: anytype) void {
             @compileError(err_msg);
         },
     }
-    switch (@typeInfo(@TypeOf(Closure.func))) {
+    switch (@typeInfo(@TypeOf(Closure.call))) {
         .Fn => |func_info| {
             if (func_info.params.len != 1 or func_info.params[0].type != Closure) {
                 @compileError(err_msg);
@@ -699,7 +699,7 @@ fn typeConstraintClosure(closure: anytype) void {
 
 fn runClosure(closure: anytype) void {
     typeConstraintClosure(closure);
-    closure.func();
+    closure.call();
 }
 
 fn returnErrorInner(return_error: bool) !void {
