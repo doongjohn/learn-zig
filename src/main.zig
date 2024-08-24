@@ -608,8 +608,8 @@ pub fn main() !void {
         const random = rng.random();
 
         for (0..5) |_| {
-            const random_num = random.intRangeAtMost(i64, 1, 10); // generate random value
-            console.printf("random between 1 ~ 10 => {}\n", .{random_num});
+            const num = random.intRangeAtMost(i64, 1, 10); // generate random value
+            console.printf("random 1 ~ 10 => {}\n", .{num});
         }
     }
 }
