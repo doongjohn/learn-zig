@@ -551,8 +551,8 @@ pub fn main() !void {
     h1("refiy type");
     {
         // type can be created at compile-time
-        // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L256
-        const MyInt = @Type(.{ .Int = .{
+        // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L259
+        const MyInt = @Type(.{ .int = .{
             .signedness = .signed,
             .bits = 32,
         } });
@@ -621,11 +621,11 @@ fn haha() void {
 fn UnwrappedType(comptime T: type) type {
     const StructField = std.builtin.Type.StructField;
     switch (@typeInfo(T)) {
-        .Struct => |struct_info| {
+        .@"struct" => |struct_info| {
             var unwrapped_fields: [struct_info.fields.len]StructField = undefined;
             inline for (struct_info.fields, 0..) |field, i| {
                 switch (@typeInfo(field.type)) {
-                    .Optional => |field_info| {
+                    .optional => |field_info| {
                         unwrapped_fields[i] = .{
                             .name = field.name,
                             .type = field_info.child,
@@ -638,7 +638,7 @@ fn UnwrappedType(comptime T: type) type {
                 }
             }
             return @Type(.{
-                .Struct = .{
+                .@"struct" = .{
                     .layout = .auto,
                     .fields = &unwrapped_fields,
                     .decls = &.{},
@@ -676,7 +676,7 @@ fn typeConstraintClosure(closure: anytype) void {
     const err_msg = "closure must be a struct that has a function `fn call(closure: @This)`";
     const Closure = @TypeOf(closure);
     switch (@typeInfo(Closure)) {
-        .Struct => {
+        .@"struct" => {
             if (!@hasDecl(Closure, "call")) {
                 @compileError(err_msg);
             }
@@ -686,7 +686,7 @@ fn typeConstraintClosure(closure: anytype) void {
         },
     }
     switch (@typeInfo(@TypeOf(Closure.call))) {
-        .Fn => |func_info| {
+        .@"fn" => |func_info| {
             if (func_info.params.len != 1 or func_info.params[0].type != Closure) {
                 @compileError(err_msg);
             }
