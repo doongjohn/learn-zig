@@ -331,11 +331,9 @@ pub fn main() !void {
         //          ^^^ --> same as [3]i64 because it has 3 items (zig can infer the length)
         for (&array, 0..) |*item, i| {
             //             ^^^^^  ^
-            //             |      └> current index
+            //             |      └> current index (usize)
             //             └> get element as a pointer (so that we can change its value)
-            item.* = @as(i64, @intCast(i)) + 1;
-            //       ^^^^^^^^^^^^^^^^^^^^^ <-- type of the array index `i` is `usize`
-            //                                 so I need to cast it to `i64`
+            item.* = @intCast(i + 1);
             console.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
@@ -432,7 +430,7 @@ pub fn main() !void {
         defer alloc.free(array);
         //           ^^^^ --> deallocate array
         for (array, 0..) |*item, i| {
-            item.* = @as(i64, @intCast(i));
+            item.* = @intCast(i);
         }
         console.printf("{any}\n", .{array});
 
@@ -581,7 +579,7 @@ pub fn main() !void {
         }
     }
 
-    h1("closure function");
+    h1("closure with capture");
     {
         var a: i32 = 100;
 
@@ -594,7 +592,7 @@ pub fn main() !void {
                 console.printf("this is a closure: a = {d}\n", .{closure.a.*});
             }
         }{
-            .a = &a,
+            .a = &a, // capture
         });
 
         console.printf("a = {d}\n", .{a});
@@ -602,13 +600,12 @@ pub fn main() !void {
 
     h1("random");
     {
-        // init random number generator
-        const seed = @as(u64, @intCast(std.time.timestamp()));
+        const seed: u64 = @intCast(std.time.timestamp());
         var rng = std.Random.DefaultPrng.init(seed);
         const random = rng.random();
 
         for (0..5) |_| {
-            const num = random.intRangeAtMost(i64, 1, 10); // generate random value
+            const num = random.intRangeAtMost(i64, 1, 10);
             console.printf("random 1 ~ 10 => {}\n", .{num});
         }
     }
