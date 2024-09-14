@@ -669,33 +669,32 @@ fn Point2d() type {
     };
 }
 
-fn typeConstraintClosure(closure: anytype) void {
-    const err_msg = "closure must be a struct that has a function `fn call(closure: @This)`";
+inline fn typeCheckClosure(closure: anytype) void {
+    const comptimePrint = std.fmt.comptimePrint;
+
     const Closure = @TypeOf(closure);
-    switch (@typeInfo(Closure)) {
-        .@"struct" => {
-            if (!@hasDecl(Closure, "call")) {
-                @compileError(err_msg);
-            }
-        },
-        else => {
-            @compileError(err_msg);
-        },
+    if (@typeInfo(Closure) != .@"struct") {
+        @compileError(comptimePrint("`closure` must be a `struct` but found: `{}`", .{Closure}));
     }
-    switch (@typeInfo(@TypeOf(Closure.call))) {
+    if (!@hasDecl(Closure, "call")) {
+        @compileError(comptimePrint("`closure` must have a decl `fn call(closure: @This)`", .{}));
+    }
+
+    const ClosureCall = @TypeOf(Closure.call);
+    switch (@typeInfo(ClosureCall)) {
         .@"fn" => |func_info| {
             if (func_info.params.len != 1 or func_info.params[0].type != Closure) {
-                @compileError(err_msg);
+                @compileError(comptimePrint("`closure.call` must be a `fn call(closure: @This)` but found: `{}`", .{ClosureCall}));
             }
         },
         else => {
-            @compileError(err_msg);
+            @compileError(comptimePrint("`closure.call` must be a `fn call(closure: @This)` but found: `{}`", .{ClosureCall}));
         },
     }
 }
 
 fn runClosure(closure: anytype) void {
-    typeConstraintClosure(closure);
+    typeCheckClosure(closure);
     closure.call();
 }
 
