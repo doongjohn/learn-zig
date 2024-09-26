@@ -6,12 +6,13 @@ const mem = std.mem;
 const os = std.os;
 const fs = std.fs;
 
-// cross compile to windows: zig build -Dtarget=x86_64-windows
+// Cross-compiling to Windows:
+// zig build -Dtarget=x86_64-windows
 const win32 = if (builtin.os.tag == .windows) struct {
     const win = std.os.windows;
     const WINAPI = win.WINAPI;
 
-    // windows api (easy c interop!)
+    // Windows API (Easy C interop!)
     extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
 };
 
@@ -57,8 +58,8 @@ const console = struct {
     var utf8_line_buf: [line_buf_size]u8 = .{0} ** line_buf_size;
     var utf16_line_buf: [line_buf_size]u16 = .{0} ** line_buf_size;
 
-    /// this function stores input string in a single buffer
-    /// copy the result if you want to keep the string
+    /// This function uses one buffer for storing the input string.
+    /// You need to copy it if you want to keep the string reference.
     pub fn readLine() ![]const u8 {
         switch (builtin.os.tag) {
             .windows => {
@@ -68,10 +69,10 @@ const console = struct {
 
                 const utf8_len = try std.unicode.utf16LeToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
                 //                               ^^^^^^^^^^^^^
-                //                               └> windows uses utf16 so you need to convert it to utf8 to
-                //                                  make it friendly for zig std library
+                //                               └> Windows uses utf16 so you need to convert it to utf8 to
+                //                                  make it friendly for zig std library.
                 return mem.trimRight(u8, utf8_line_buf[0..utf8_len], "\r\n");
-                //                                                    ^^^^ --> trim windows '\r\n'
+                //                                                    ^^^^ --> Trim windows '\r\n'.
             },
             else => {
                 return mem.trimRight(u8, try stdin.readUntilDelimiter(&utf8_line_buf, '\n'), "\n");
@@ -89,13 +90,15 @@ pub fn h2(comptime text: []const u8) void {
 }
 
 pub fn main() !void {
-    // use a c allocator for valgrind (you need to link libc for this)
+    // You need to use a `c_allocator` for valgrind. (You need to link LibC.)
     // const alloc = std.heap.c_allocator;
 
-    // init general purpose allocator
+    // Init general purpose allocator
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(gpa.deinit() == .ok); // detect memory leak
+    defer std.debug.assert(gpa.deinit() == .ok);
+    //                     ^^^^^^^^^^^^^^^^^^^ --> Detect memory leak.
     const alloc = gpa.allocator();
+    //               ^^^^^^^^^^^^ --> Get `Allocator` interface.
 
     console.init();
     defer console.deinit();
@@ -126,9 +129,9 @@ pub fn main() !void {
     {
         // block can return a value
         const some_text = some_block: {
-            //            ^^^^^^^^^^^ --> this is a name of this block
+            //            ^^^^^^^^^^^ --> This is the name of this block.
             if (true) {
-                break :some_block "value"; // --> break out of this block and return "value"
+                break :some_block "value"; // --> Break out of `some_block` and return "value"
                 //                                https://ziglang.org/documentation/master/#blocks
             } else {
                 break :some_block "hello";
@@ -171,25 +174,25 @@ pub fn main() !void {
         h2("for loop");
         const string = "Hello, world!";
 
-        // range
+        // Iterate range.
         for (0..5) |i| { // 0 ~ 4
             console.printf("{} ", .{i});
         }
         console.println("");
 
-        // get element
+        // Iterate slices / arrays while capturing element.
         for (string) |byte| {
             console.printf("{c} ", .{byte});
         }
         console.println("");
 
-        // get index
+        // Iterate slices / arrays while capturing index.
         for (string, 0..) |_, index| {
             console.printf("{d} ", .{index});
         }
         console.println("");
 
-        // get element and index
+        // Iterate slices / arrays while capturing element and index.
         for (string, 0..) |byte, index| {
             console.printf("string[{d}]: {c}\n", .{ index, byte });
         }
@@ -213,7 +216,7 @@ pub fn main() !void {
                 break byte;
             }
         } else blk: {
-            // this runs when a for loop didn't break
+            // This runs when this for loop didn't break.
             break :blk 'x';
         };
         console.printf("found: {c}\n", .{w1});
@@ -226,7 +229,7 @@ pub fn main() !void {
                 break byte;
             }
         } else blk: {
-            // this runs when a for loop didn't break
+            // This runs when this for loop didn't break.
             break :blk 'x';
         };
         console.printf("found: {c}\n", .{w2});
@@ -239,11 +242,11 @@ pub fn main() !void {
         console.printf("num: {d}\n", .{num});
 
         var num_ptr: *i32 = undefined;
-        //           ^^^^ --> pointer type
+        //           ^^^^ --> Pointer to i32.
         num_ptr = &num;
-        //        ^^^^ --> pointer of variable num (just like c)
+        //        ^^^^ --> Pointer of variable `num`. (Just like C)
         num_ptr.* += 5;
-        //     ^^ --> dereference pointer
+        //     ^^ --> Pointer dereferencing.
 
         console.printf("num: {d}\n", .{num});
     }
@@ -252,8 +255,8 @@ pub fn main() !void {
         var num1: i32 = 10;
         var num2: i32 = 20;
         var ptr: *const i32 = &num1;
-        //       ^^^^^^ --> immutable dereference
-        //                  ptr.* = 1; <-- this is compile time error
+        //       ^^^^^^ --> Pointer to `const i32`.
+        //                  ptr.* = 1; <-- this is compile time error because dereferenced type is `const i32`
         console.printf("ptr.*: {d}\n", .{ptr.*});
         ptr = &num2;
         console.printf("ptr.*: {d}\n", .{ptr.*});
@@ -261,29 +264,31 @@ pub fn main() !void {
     {
         h2("heap allocation");
         const heap_int = try alloc.create(i32);
-        //                          ^^^^^^ --> allocates a single item
+        //                         ^^^^^^ --> Allocates a single item.
         defer alloc.destroy(heap_int);
-        //           ^^^^^^^ --> deallocates a single item
+        //          ^^^^^^^ --> Deallocates a single item.
 
         heap_int.* = 100;
         console.printf("num: {d}\n", .{heap_int.*});
     }
     {
+        // https://ziglang.org/documentation/master/#Optionals
+
         h2("optional(nullable) pointer");
         var opt_ptr: ?*i32 = null;
-        //           ^ --> optional type (null is allowed)
-        //                 it is zero cost for the pointer
+        //           ^ --> Optional type (nullable)
+        //                 It's zero cost for the pointer.
 
         opt_ptr = try alloc.create(i32);
         defer if (opt_ptr) |ptr| alloc.destroy(ptr);
 
         opt_ptr.?.* = 100;
-        //     ^^ --> unwraps optional (runtime error if null)
+        //     ^^ --> Unwraps optional value (runtime error if null)
         console.printf("optional pointer value: {d}\n", .{opt_ptr.?.*});
 
         if (opt_ptr) |ptr| {
-            //        ^^^ --> this is unwrapped ptr and this variable is
-            //                only available in this scope
+            //        ^^^ --> This is the unwrapped value of opt_ptr and this variable is
+            //                only available in this scope.
             ptr.* = 10;
             console.printf("optional pointer value: {d}\n", .{ptr.*});
         } else {
@@ -292,8 +297,9 @@ pub fn main() !void {
 
         blk: {
             const ptr = opt_ptr orelse break :blk;
-            //                  ^^^^^^ --> it returns unwrapped valur if the value is not null
-            //                             https://ziglang.org/documentation/master/#Optionals
+            //                  ^^^^^^ --> `a orelse b`
+            //                             If a is null, returns b ("default value"), otherwise returns the unwrapped value of a.
+            //                             Note that b may be a value of type noreturn.
             ptr.* += 10;
             console.printf("optional pointer value: {d}\n", .{ptr.*});
         }
@@ -323,38 +329,36 @@ pub fn main() !void {
     h1("array");
     {
         h2("basic array");
-        var array = [_]i64{ 1, 10, 100 }; // this array is mutable because it is declared as `var`
-        //          ^^^ --> same as [3]i64 because it has 3 items (zig can infer the length)
+        var array = [_]i64{ 1, 10, 100 }; // This array is mutable because it is declared as `var`.
+        //          ^^^ --> Same as [3]i64 because it has 3 items. (zig can infer the length.)
         for (&array, 0..) |*item, i| {
             //             ^^^^^  ^
-            //             |      └> current index (usize)
-            //             └> get element as a pointer (so that we can change its value)
+            //             |      └> Current index. (usize)
+            //             └> Capture the element as a pointer. (So that we can change its value.)
             item.* = @intCast(i + 1);
             console.printf("[{d}]: {d}\n", .{ i, item.* });
         }
 
         h2("init array with ** operator");
         const array2 = [_]i64{ 1, 2, 3 } ** 3;
-        //                   ^^^^^^^^^^^^^ --> this will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 }
-        //                                     at compile time
+        //                   ^^^^^^^^^^^^^ --> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
         console.printf("{any}\n", .{array2});
 
         h2("assigning array to array");
-        // array gets copied when assigned
         var arr1 = [_]i32{ 0, 0, 0 };
-        var arr2 = arr1;
+        var arr2 = arr1; // Array gets copied when assigned.
         console.printf("arr1: {p}\n", .{&arr1[0]});
         console.printf("arr2: {p}\n", .{&arr2[0]});
 
         h2("concat array compile-time");
         const concated = "wow " ++ "hey " ++ "yay";
-        //                      ^^ --> compiletime array concatenation operator
+        //                      ^^ --> Compile-time array concatenation operator.
         console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
 
         h2("slice");
-        var arr1_slice = arr1[0..]; // a slice is a pointer and a length (its length is known at runtime)
+        var arr1_slice = arr1[0..]; // Slice is a pointer and a length. (Its length is known at runtime.)
         //                    ^^^
-        //                    └> from index 0 to the end
+        //                    └> From index 0 to the end.
         console.printf("arr1: {p}\n", .{&arr1[0]});
         console.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
         arr1_slice[0] = 10;
@@ -365,10 +369,10 @@ pub fn main() !void {
 
         arr1_slice = &arr1;
         //           ^^^^^
-        //           └> array pointer can be coerced to slice
+        //           └> Array pointer can be coerced to slice.
 
         h2("pointer to array");
-        const arr_ptr = &array; // pointer to an array
+        const arr_ptr = &array; // Pointer to an array.
         console.printf("{s}\n", .{@typeName(@TypeOf(array))});
         console.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
         for (arr_ptr, 0..) |item, i| {
@@ -376,7 +380,7 @@ pub fn main() !void {
         }
 
         h2("@memset");
-        @memset(&array, 3); // --> set every elements in array to 3
+        @memset(&array, 3); // --> Set every elements in the array to 3.
         for (array, 0..) |item, i| {
             console.printf("[{d}]: {d}\n", .{ i, item });
         }
@@ -384,22 +388,22 @@ pub fn main() !void {
     {
         h2("strings");
 
-        // strings are just u8 array
-        // (so handling Unicode is not trivial...)
+        // Strings are just array of u8.
+        // (So handling Unicode is not trivial...)
         var yay = [_]u8{ 'y', 'a', 'y' };
         yay[0] = 'Y';
         console.println(yay[0..]);
         console.printf("{s}\n", .{@typeName(@TypeOf(yay))});
 
-        // string literals are const slice to null terminated u8 array
-        // read more: https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
-        // read more: https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
+        // String literals are const slice to null terminated u8 array.
+        // - https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
+        // - https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
         const str_lit = "this is a string literal";
         console.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
-        // (&str_lit[0]).* = 'A'; // <-- this is compile error because it's a const slice
-        //                               very nice!
+        // (&str_lit[0]).* = 'A'; // <-- This is compile-time error because it's a const slice.
+        //                               Very nice!
 
-        // multiline string
+        // Multiline string literal.
         const msg =
             \\Hello, world!
             \\Zig is awesome!
@@ -413,8 +417,8 @@ pub fn main() !void {
         var array_length: usize = undefined;
         while (true) {
             const input = try console.readLine();
-            // handle error
             array_length = std.fmt.parseInt(usize, input, 10) catch {
+                //                                            ^^^^^ --> Handle the error.
                 console.print(">> please input positive number: ");
                 continue;
             };
@@ -422,9 +426,9 @@ pub fn main() !void {
         }
 
         const array = try alloc.alloc(i64, array_length);
-        //                       ^^^^^ --> allocate array
+        //                       ^^^^^ --> Allocate an array.
         defer alloc.free(array);
-        //           ^^^^ --> deallocate array
+        //           ^^^^ --> Deallocate an array.
         for (array, 0..) |*item, i| {
             item.* = @intCast(i);
         }
@@ -437,7 +441,7 @@ pub fn main() !void {
         console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
 
         h2("std.ArrayList");
-        // string builder like function with ArrayList
+        // You can use `ArrayList(u8)` as String builder.
         var str_builder = std.ArrayList(u8).init(alloc);
         defer str_builder.deinit();
         try str_builder.appendSlice("wow ");
@@ -449,29 +453,29 @@ pub fn main() !void {
     h1("enum");
     {
         const MyEnum = enum(u8) { Hello, Bye, _ };
-        //                                    ^ --> non-exhaustive enum
-        //                                          must use `else` in the switch
+        //                                    ^ --> This means MyEnum is a non-exhaustive enum.
+        //                                          https://ziglang.org/documentation/master/#Non-exhaustive-enum
 
         const e: MyEnum = .Hello;
         switch (e) {
             .Hello => console.printf("{}\n", .{e}),
             .Bye => console.printf("{}\n", .{e}),
-            else => console.println("other"),
+            else => console.println("other"), // Must use `else` when switching on non-exhaustive enum.
         }
     }
 
     h1("struct");
     {
-        // all types including struct is a value that can be stored in a comptime variable
+        // All types including a struct is a value that can be stored in a comptime variable.
         // https://ziglang.org/documentation/master/#Struct-Naming
         const SomeStruct = struct {
-            num: i64 = 0, // <-- this field has a default value
+            num: i64 = 0, // <-- This field has a default value.
             text: []const u8,
         };
 
-        var some_struct = SomeStruct{ .text = "" }; // initalize struct by `StructName{}`
+        var some_struct = SomeStruct{ .text = "" }; // Initalize struct by `StructName{}`.
         //                            ^^^^^^^^^^
-        //                            └-> this is necessary because `text` has no default value
+        //                            └-> This is necessary because `text` has no default value.
         some_struct.num = 10;
         some_struct.text = "hello";
         console.printf("some_struct = {}\n", .{some_struct});
@@ -479,11 +483,11 @@ pub fn main() !void {
 
         var point: Point2d() = undefined;
         //         ^^^^^^^^^
-        //         └-> function returning a type can be used as a type
+        //         └-> Function returning a type can be used as a type.
         point = Point2d(){ .x = 10, .y = 20 };
         console.printf("point = {}\n", .{point});
 
-        // result location semantics
+        // Result location semantics.
         // https://www.youtube.com/watch?v=dEIsJPpCZYg
         var s: struct { a: i32, b: i32 } = .{
             .a = 10,
@@ -491,19 +495,19 @@ pub fn main() !void {
         };
         console.printf("s: {}\n", .{s});
         s = .{
-            .a = 50, // <-- writes 50 to s.a
-            .b = s.a, // <-- writes s.a to s.b so it becomes 50
+            .a = 50, // <-- Writes 50 to `s.a`.
+            .b = s.a, // <-- Writes `s.a` to `s.b` so it becomes 50.
         };
         console.printf("s: {}\n", .{s});
 
         h2("tuple");
-        // struct without field name can be used as a tuple
+        // Struct without field names can be used as a tuple.
         // https://ziglang.org/documentation/master/#Tuples
         const tuple = .{ @as(i32, 100), "yo" };
         console.printf("{d}\n", .{tuple[0]});
         console.printf("{s}\n", .{tuple[1]});
 
-        // structs can be combined at compiletime
+        // Structs can be combined at compile-time.
         const tuple2 = tuple ++ .{"wow"};
         console.printf("{d}\n", .{tuple2[0]});
         console.printf("{s}\n", .{tuple2[1]});
@@ -512,7 +516,7 @@ pub fn main() !void {
 
     h1("destructuring");
     {
-        // destructuring can be done with
+        // Destructuring can be done with:
         // * Tuples
         // * Arrays
         // * Vectors
@@ -544,7 +548,7 @@ pub fn main() !void {
 
     h1("refiy type");
     {
-        // type can be created at compile-time
+        // Type can be created at compile-time.
         // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L259
         const MyInt = @Type(.{ .int = .{
             .signedness = .signed,
@@ -554,7 +558,7 @@ pub fn main() !void {
         const n: MyInt = 20;
         console.printf("{d}\n", .{n});
 
-        // multiple unwrap using refiy type
+        // Multiple unwrap using refiy type.
         var opt_a: ?i32 = null;
         const opt_b: ?f32 = 2.2;
         if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
@@ -624,7 +628,7 @@ fn UnwrappedType(comptime T: type) type {
                             .type = field_info.child,
                             .default_value = null,
                             .is_comptime = false,
-                            .alignment = 0, // meaningless for `.layout = .auto`
+                            .alignment = 0, // Meaningless for `.layout = .auto`.
                         };
                     },
                     else => @compileError("all fields must be optional type!"),
@@ -657,7 +661,7 @@ fn unwrapAll(tuple: anytype) ?UnwrappedType(@TypeOf(tuple)) {
     return null;
 }
 
-// name of a function that returns a type should start with a capital letter
+// Name of a function that returns a type should use PascalCase.
 fn Point2d() type {
     return struct {
         x: i64 = 0,
@@ -695,7 +699,7 @@ fn runClosure(closure: anytype) void {
 }
 
 fn returnErrorInner(return_error: bool) !void {
-    // const Error = error{TestError}; // --> error set
+    // const Error = error{TestError}; // --> `error set`
     //                                        https://ziglang.org/documentation/master/#Errors
     if (return_error) {
         return error.TestError;
@@ -705,9 +709,9 @@ fn returnErrorInner(return_error: bool) !void {
 }
 
 fn returnError(return_error: bool) !void {
-    errdefer console.println("errdefer"); // --> errdefer only gets executed when
-    //                                           this function returns an error
+    errdefer console.println("errdefer"); // --> `errdefer` only gets executed when
+    //                                           this function returns an error.
 
     try returnErrorInner(return_error); // --> `try` is equal to `someFunc() catch |err| return err;`
-    //                                          so if it returns an error, code below here will not be executed
+    //                                          so if it returns an error, code below here will not be executed.
 }
