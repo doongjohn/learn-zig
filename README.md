@@ -20,3 +20,31 @@
 
 - `zig fetch --save`
     - <https://ziggit.dev/t/feature-or-bug-w-zig-fetch-save/2565/4>
+
+- Linking with pre-built library
+    ```zig
+    const exe = b.addExecutable(.{...});
+
+    exe.addIncludePath(b.path("vendor/SDL3-3.1.6/include"));
+    exe.addLibraryPath(b.path("vendor/SDL3-3.1.6_build"));
+    exe.linkSystemLibrary("SDL3");
+    exe.linkLibC();
+
+    b.installArtifact(exe);
+
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    run_cmd.addPathDir("vendor/SDL3-3.1.6_build"); // to avoid having to copy the dll to the exe path
+    ```
+
+    ```zig
+    const exe = b.addExecutable(.{...});
+
+    exe.addIncludePath(b.path("vendor/SDL3-3.1.6/include"));
+    exe.addLibraryPath(b.path("vendor/SDL3-3.1.6_build"));
+    exe.linkSystemLibrary("SDL3");
+    exe.linkLibC();
+
+    b.installArtifact(exe);
+    b.installBinFile("vendor/SDL3-3.1.6_build/SDL3.dll", "SDL3.dll");  // copy the dll to the exe path
+    ```
