@@ -21,10 +21,9 @@
 - `zig fetch --save`
     - <https://ziggit.dev/t/feature-or-bug-w-zig-fetch-save/2565/4>
 
-- Linking with pre-built library
+- Linking with pre-built `dll`
     ```zig
     const exe = b.addExecutable(.{...});
-
     exe.addIncludePath(b.path("vendor/SDL3-3.1.6/include"));
     exe.addLibraryPath(b.path("vendor/SDL3-3.1.6_build"));
     exe.linkSystemLibrary("SDL3");
@@ -39,7 +38,6 @@
 
     ```zig
     const exe = b.addExecutable(.{...});
-
     exe.addIncludePath(b.path("vendor/SDL3-3.1.6/include"));
     exe.addLibraryPath(b.path("vendor/SDL3-3.1.6_build"));
     exe.linkSystemLibrary("SDL3");
