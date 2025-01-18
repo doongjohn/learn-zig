@@ -626,7 +626,7 @@ fn UnwrappedType(comptime T: type) type {
                         unwrapped_fields[i] = .{
                             .name = field.name,
                             .type = field_info.child,
-                            .default_value = null,
+                            .default_value_ptr = null,
                             .is_comptime = false,
                             .alignment = 0, // Meaningless for `.layout = .auto`.
                         };
