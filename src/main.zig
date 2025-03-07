@@ -89,16 +89,24 @@ pub fn h2(comptime text: []const u8) void {
     console.println("\n\x1b[;32m" ++ "## " ++ text ++ "\x1b[0m");
 }
 
+var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
+
 pub fn main() !void {
+    // Init general purpose allocator
+    const alloc, const is_debug = gpa: {
+        if (builtin.os.tag == .wasi) break :gpa .{ std.heap.wasm_allocator, false };
+        break :gpa switch (builtin.mode) {
+            .Debug, .ReleaseSafe => .{ debug_allocator.allocator(), true },
+            .ReleaseFast, .ReleaseSmall => .{ std.heap.smp_allocator, false },
+        };
+    };
+    defer if (is_debug) {
+        std.debug.assert(debug_allocator.deinit() == .ok);
+        //                              ^^^^^^^^^^^^^^^^ --> Detect memory leak.
+    };
+
     // You need to use a `c_allocator` for valgrind. (You need to link LibC.)
     // const alloc = std.heap.c_allocator;
-
-    // Init general purpose allocator
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(gpa.deinit() == .ok);
-    //                     ^^^^^^^^^^^^^^^^^^^ --> Detect memory leak.
-    const alloc = gpa.allocator();
-    //               ^^^^^^^^^^^^ --> Get `Allocator` interface.
 
     console.init();
     defer console.deinit();
