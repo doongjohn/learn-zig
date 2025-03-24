@@ -10,10 +10,9 @@ const fs = std.fs;
 // zig build -Dtarget=x86_64-windows
 const win32 = if (builtin.os.tag == .windows) struct {
     const win = std.os.windows;
-    const WINAPI = win.WINAPI;
 
     // Windows API (Easy C interop!)
-    extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
+    extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) bool;
 };
 
 const console = struct {
