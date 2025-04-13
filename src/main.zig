@@ -1,5 +1,4 @@
 const builtin = @import("builtin");
-const cpu = builtin.cpu;
 
 const std = @import("std");
 const mem = std.mem;
