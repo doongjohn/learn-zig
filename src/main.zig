@@ -308,151 +308,166 @@ pub fn main() !void {
             ptr.* += 10;
             console.printf("optional pointer value: {d}\n", .{ptr.*});
         }
-    }
 
-    h1("function pointer & alias");
-    {
-        // function pointer
-        const f: *const fn () void = haha;
-        f();
-        console.printf("{s}\n", .{@typeName(@TypeOf(f))});
+        h2("function pointer & alias");
+        {
+            // Function pointer.
+            const f: *const fn () void = haha;
+            f();
+            console.printf("{s}\n", .{@typeName(@TypeOf(f))});
 
-        // function alias
-        const f2: fn () void = haha;
-        f2();
-        console.printf("{s}\n", .{@typeName(@TypeOf(f2))});
-
-        // nested function
-        const nested_fn = struct {
-            fn func() void {
-                console.println("nested fn");
-            }
-        };
-        nested_fn.func();
+            // Function alias.
+            const f2: fn () void = haha;
+            f2();
+            console.printf("{s}\n", .{@typeName(@TypeOf(f2))});
+        }
     }
 
     h1("array");
     {
         h2("basic array");
-        var array = [_]i64{ 1, 10, 100 }; // This array is mutable because it is declared as `var`.
-        //          ^^^ --> Same as [3]i64 because it has 3 items. (zig can infer the length.)
-        for (&array, 0..) |*item, i| {
-            //             ^^^^^  ^
-            //             |      └> Current index. (usize)
-            //             └> Capture the element as a pointer. (So that we can change its value.)
-            item.* = @intCast(i + 1);
-            console.printf("[{d}]: {d}\n", .{ i, item.* });
+        {
+            var arr = [_]i64{ 1, 10, 100 }; // This array is mutable because it is declared as `var`.
+            //        ^^^ --> Same as [3]i64 because it has 3 items. (zig can infer the length.)
+            for (&arr, 0..) |*item, i| {
+                //           ^^^^^  ^
+                //           |      └> Current index. (usize)
+                //           └> Capture the element as a pointer. (So that we can change its value.)
+                item.* = @intCast(i + 1);
+                console.printf("[{d}]: {d}\n", .{ i, item.* });
+            }
         }
 
         h2("init array with ** operator");
-        const array2 = [_]i64{ 1, 2, 3 } ** 3;
-        //                   ^^^^^^^^^^^^^ --> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
-        console.printf("{any}\n", .{array2});
+        {
+            const arr = [_]i64{ 1, 2, 3 } ** 3;
+            //                               ^^^^
+            //                               └> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
+            console.printf("{any}\n", .{arr});
+        }
 
         h2("assigning array to array");
-        var arr1 = [_]i32{ 0, 0, 0 };
-        var arr2 = arr1; // Array gets copied when assigned.
-        console.printf("arr1: {p}\n", .{&arr1[0]});
-        console.printf("arr2: {p}\n", .{&arr2[0]});
+        {
+            var a1 = [_]i32{ 0, 0, 0 };
+            var a2 = a1; // Array gets copied when assigned.
+            console.printf("a1: {p} != a2: {p}\n", .{ &a1[0], &a2[0] });
+        }
 
         h2("concat array compile-time");
-        const concated = "wow " ++ "hey " ++ "yay";
-        //                      ^^ --> Compile-time array concatenation operator.
-        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        {
+            const concated = "wow " ++ "hey " ++ "yay";
+            //                      ^^ --> Compile-time array concatenation operator.
+            console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        }
 
         h2("slice");
-        var arr1_slice = arr1[0..]; // Slice is a pointer and a length. (Its length is known at runtime.)
-        //                    ^^^
-        //                    └> From index 0 to the end.
-        console.printf("arr1: {p}\n", .{&arr1[0]});
-        console.printf("arr1_slice: {p}\n", .{&arr1_slice[0]});
-        arr1_slice[0] = 10;
-        for (arr1_slice, 0..) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
-        }
-        console.printf("arr[0]: {d}\n", .{&arr1[0]});
+        {
+            var arr = [_]i32{ 0, 0, 0 };
+            var slice = arr[0..]; // Slice is a pointer and a length. (Its length is known at runtime.)
+            //              ^^^
+            //              └> From index 0 to the end.
+            console.printf("arr1: {p}\n", .{&arr[0]});
+            console.printf("arr1_slice: {p}\n", .{&slice[0]});
+            slice[0] = 10;
+            for (slice, 0..) |item, i| {
+                console.printf("[{d}]: {d}\n", .{ i, item });
+            }
+            console.printf("arr[0]: {d}\n", .{&arr[0]});
 
-        arr1_slice = &arr1;
-        //           ^^^^^
-        //           └> Array pointer can be coerced to slice.
+            slice = &arr;
+            //      ^^^^
+            //      └> Array pointer can be coerced to slice.
+        }
 
         h2("pointer to array");
-        const arr_ptr = &array; // Pointer to an array.
-        console.printf("{s}\n", .{@typeName(@TypeOf(array))});
-        console.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
-        for (arr_ptr, 0..) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
+        {
+            const arr = [_]i64{ 1, 2, 3 };
+            const arr_ptr = &arr; // Pointer to an array.
+            console.printf("{s}\n", .{@typeName(@TypeOf(arr))});
+            console.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
+            for (arr_ptr, 0..) |item, i| {
+                console.printf("[{d}]: {d}\n", .{ i, item });
+            }
         }
 
         h2("@memset");
-        @memset(&array, 3); // --> Set every elements in the array to 3.
-        for (array, 0..) |item, i| {
-            console.printf("[{d}]: {d}\n", .{ i, item });
+        {
+            var arr: [3]i64 = undefined;
+            @memset(&arr, 3); // --> Set every elements in the array to 3.
+            for (arr, 0..) |item, i| {
+                console.printf("[{d}]: {d}\n", .{ i, item });
+            }
         }
-    }
-    {
-        h2("strings");
 
-        // Strings are just array of u8.
-        // (So handling Unicode is not trivial...)
-        var yay = [_]u8{ 'y', 'a', 'y' };
-        yay[0] = 'Y';
-        console.println(yay[0..]);
-        console.printf("{s}\n", .{@typeName(@TypeOf(yay))});
-
-        // String literals are const slice to null terminated u8 array.
-        // - https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
-        // - https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
-        const str_lit = "this is a string literal";
-        console.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
-        // (&str_lit[0]).* = 'A'; // <-- This is compile-time error because it's a const slice.
-        //                               Very nice!
-
-        // Multiline string literal.
-        const msg =
-            \\Hello, world!
-            \\Zig is awesome!
-            \\
-        ;
-        console.print(msg);
-    }
-    {
         h2("heap allocated array");
-        console.print(">> array length: ");
-        var array_length: usize = undefined;
-        while (true) {
-            const input = try console.readLine();
-            array_length = std.fmt.parseInt(usize, input, 10) catch {
-                //                                            ^^^^^ --> Handle the error.
-                console.print(">> please input positive number: ");
-                continue;
-            };
-            break;
-        }
+        {
+            console.print(">> input array length: ");
+            var arr_length: usize = undefined;
+            while (true) {
+                const input = try console.readLine();
+                arr_length = std.fmt.parseInt(usize, input, 10) catch {
+                    //                                          ^^^^^ --> Handle the error.
+                    console.print(">> please input positive integer: ");
+                    continue;
+                };
+                break;
+            }
 
-        const array = try alloc.alloc(i64, array_length);
-        //                       ^^^^^ --> Allocate an array.
-        defer alloc.free(array);
-        //           ^^^^ --> Deallocate an array.
-        for (array, 0..) |*item, i| {
-            item.* = @intCast(i);
+            const arr = try alloc.alloc(i64, arr_length);
+            //                    ^^^^^ --> Allocate an array.
+            defer alloc.free(arr);
+            //          ^^^^ --> Deallocate an array.
+
+            for (arr, 0..) |*item, i| {
+                item.* = @intCast(i);
+            }
+            console.printf("{any}\n", .{arr});
         }
-        console.printf("{any}\n", .{array});
 
         h2("concat array run-time");
-        const words = [_][]const u8{ "wow ", "hey ", "yay" };
-        const concated = try mem.concat(alloc, u8, words[0..]);
-        defer alloc.free(concated);
-        console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        {
+            const words = [_][]const u8{ "wow ", "hey ", "yay" };
+            const concated = try mem.concat(alloc, u8, words[0..]);
+            defer alloc.free(concated);
+            console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
+        }
 
         h2("std.ArrayList");
-        // You can use `ArrayList(u8)` as String builder.
-        var str_builder = std.ArrayList(u8).init(alloc);
-        defer str_builder.deinit();
-        try str_builder.appendSlice("wow ");
-        try str_builder.appendSlice("this is cool! ");
-        try str_builder.appendSlice("super power!");
-        console.printf("{s}\n", .{str_builder.items});
+        {
+            // You can use `ArrayList(u8)` as String builder.
+            var str_builder = std.ArrayList(u8).init(alloc);
+            defer str_builder.deinit();
+            try str_builder.appendSlice("wow ");
+            try str_builder.appendSlice("this is cool! ");
+            try str_builder.appendSlice("super power!");
+            console.printf("{s}\n", .{str_builder.items});
+        }
+
+        h2("string");
+        {
+            // Strings are just array of u8.
+            // (So handling Unicode is not trivial...)
+            var yay = [_]u8{ 'y', 'a', 'y' };
+            yay[0] = 'Y';
+            console.println(yay[0..]);
+            console.printf("{s}\n", .{@typeName(@TypeOf(yay))});
+
+            // String literals are const slice to null terminated u8 array.
+            // - https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
+            // - https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
+            const str_lit = "this is a string literal";
+            console.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
+            // (&str_lit[0]).* = 'A'; // <-- This is compile-time error because it's a const slice.
+            //                               Very nice!
+
+            // Multiline string literal.
+            const msg =
+                \\Hello, world!
+                \\Zig is awesome!
+                \\
+            ;
+            console.print(msg);
+        }
     }
 
     h1("enum");
@@ -478,7 +493,7 @@ pub fn main() !void {
             text: []const u8,
         };
 
-        var some_struct = SomeStruct{ .text = "" }; // Initalize struct by `StructName{}`.
+        var some_struct = SomeStruct{ .text = "" };
         //                            ^^^^^^^^^^
         //                            └-> This is necessary because `text` has no default value.
         some_struct.num = 10;
@@ -486,37 +501,58 @@ pub fn main() !void {
         console.printf("some_struct = {}\n", .{some_struct});
         console.printf("some_struct.text = {s}\n", .{some_struct.text});
 
-        var point: Point2d() = undefined;
-        //         ^^^^^^^^^
-        //         └-> Function returning a type can be used as a type.
-        point = Point2d(){ .x = 10, .y = 20 };
-        console.printf("point = {}\n", .{point});
+        h2("function returning type");
+        {
+            var p1: Point2d() = undefined;
+            var p2: Point2d() = undefined;
+            //      ^^^^^^^^^
+            //      └-> Function returning a type can be used as a type.
+            p1 = Point2d(){ .x = 10, .y = 20 };
+            p2 = Point2d(){ .x = 20, .y = 10 };
+            console.printf("p1 = {}\n", .{p1});
+            console.printf("Type of p1 and p2 is equal: {}\n", .{@TypeOf(p1) == @TypeOf(p2)});
+        }
 
-        // Result location semantics.
-        // https://www.youtube.com/watch?v=dEIsJPpCZYg
-        var s: struct { a: i32, b: i32 } = .{
-            .a = 10,
-            .b = 20,
-        };
-        console.printf("s: {}\n", .{s});
-        s = .{
-            .a = 50, // <-- Writes 50 to `s.a`.
-            .b = s.a, // <-- Writes `s.a` to `s.b` so it becomes 50.
-        };
-        console.printf("s: {}\n", .{s});
+        h2("result location semantics");
+        {
+            // https://www.youtube.com/watch?v=dEIsJPpCZYg
+            var f: struct { a: i32, b: i32 } = .{
+                .a = 10,
+                .b = 20,
+            };
+            console.printf("s: {}\n", .{f});
+            f = .{
+                .a = 50, // <-- Writes 50 to `s.a`.
+                .b = f.a, // <-- Writes `s.a` to `s.b` so it becomes 50.
+            };
+            console.printf("s: {}\n", .{f});
+        }
 
         h2("tuple");
-        // Struct without field names can be used as a tuple.
-        // https://ziglang.org/documentation/master/#Tuples
-        const tuple = .{ @as(i32, 100), "yo" };
-        console.printf("{d}\n", .{tuple[0]});
-        console.printf("{s}\n", .{tuple[1]});
+        {
+            // Struct without field names can be used as a tuple.
+            // https://ziglang.org/documentation/master/#Tuples
+            const tuple = .{ @as(i32, 100), "yo" };
+            console.printf("[0]: {d}\n", .{tuple[0]});
+            console.printf("[1]: {s}\n", .{tuple[1]});
 
-        // Structs can be combined at compile-time.
-        const tuple2 = tuple ++ .{"wow"};
-        console.printf("{d}\n", .{tuple2[0]});
-        console.printf("{s}\n", .{tuple2[1]});
-        console.printf("{s}\n", .{tuple2[2]});
+            // Structs can be combined at compile-time.
+            const tuple2 = tuple ++ .{"wow"};
+            console.printf("[0]: {d}\n", .{tuple2[0]});
+            console.printf("[1]: {s}\n", .{tuple2[1]});
+            console.printf("[2]: {s}\n", .{tuple2[2]});
+        }
+
+        h2("Nested function");
+        {
+            // There is no nested function so you need to use a struct.
+            const fn_wrapper = struct {
+                fn nested_func() void {
+                    console.println("nested fn");
+                }
+            };
+            fn_wrapper.nested_func();
+        }
     }
 
     h1("destructuring");
@@ -540,15 +576,42 @@ pub fn main() !void {
 
     h1("error & errdefer");
     {
-        h2("with error");
-        returnError(true) catch |err| {
-            console.printf("{!}\n", .{err});
-        };
+        blk1: {
+            returnError(true) catch |err| {
+                console.printf("{!}\n", .{err});
+                break :blk1;
+            };
+            console.print("no error\n");
+        }
 
-        h2("without error");
-        returnError(false) catch |err| {
-            console.printf("{!}\n", .{err});
-        };
+        blk2: {
+            returnError(false) catch |err| {
+                console.printf("{!}\n", .{err});
+                break :blk2;
+            };
+            console.print("no error\n");
+        }
+    }
+
+    h1("closure with capture");
+    {
+        var a: i32 = 100;
+        console.printf("before closure: a = {d}\n", .{a});
+
+        runClosure(struct {
+            // Closure captures.
+            a: *i32,
+
+            // Closure function.
+            fn call(closure: @This()) void {
+                closure.a.* += 100;
+            }
+        }{
+            // Capturing variable.
+            .a = &a,
+        });
+
+        console.printf("after closure: a = {d}\n", .{a});
     }
 
     h1("refiy type");
@@ -584,25 +647,6 @@ pub fn main() !void {
         }
     }
 
-    h1("closure with capture");
-    {
-        var a: i32 = 100;
-
-        runClosure(struct {
-            a: *i32,
-
-            fn call(closure: @This()) void {
-                console.printf("this is a closure: a = {d}\n", .{closure.a.*});
-                closure.a.* += 100;
-                console.printf("this is a closure: a = {d}\n", .{closure.a.*});
-            }
-        }{
-            .a = &a, // capture
-        });
-
-        console.printf("a = {d}\n", .{a});
-    }
-
     h1("random");
     {
         const seed: u64 = @intCast(std.time.timestamp());
@@ -618,52 +662,6 @@ pub fn main() !void {
 
 fn haha() void {
     std.debug.print("haha\n", .{});
-}
-
-fn UnwrappedType(comptime T: type) type {
-    const StructField = std.builtin.Type.StructField;
-    switch (@typeInfo(T)) {
-        .@"struct" => |struct_info| {
-            var unwrapped_fields: [struct_info.fields.len]StructField = undefined;
-            inline for (struct_info.fields, 0..) |field, i| {
-                switch (@typeInfo(field.type)) {
-                    .optional => |field_info| {
-                        unwrapped_fields[i] = .{
-                            .name = field.name,
-                            .type = field_info.child,
-                            .default_value_ptr = null,
-                            .is_comptime = false,
-                            .alignment = 0, // Meaningless for `.layout = .auto`.
-                        };
-                    },
-                    else => @compileError("all fields must be optional type!"),
-                }
-            }
-            return @Type(.{
-                .@"struct" = .{
-                    .layout = .auto,
-                    .fields = &unwrapped_fields,
-                    .decls = &.{},
-                    .is_tuple = true,
-                },
-            });
-        },
-        else => @compileError("parameter must be struct type!"),
-    }
-}
-
-fn unwrapAll(tuple: anytype) ?UnwrappedType(@TypeOf(tuple)) {
-    var result: UnwrappedType(@TypeOf(tuple)) = undefined;
-    inline for (tuple, 0..) |opt_field, i| {
-        if (opt_field) |field| {
-            result[i] = field;
-        } else {
-            break;
-        }
-    } else {
-        return result;
-    }
-    return null;
 }
 
 // Name of a function that returns a type should use PascalCase.
@@ -719,4 +717,50 @@ fn returnError(return_error: bool) !void {
 
     try returnErrorInner(return_error); // --> `try` is equal to `someFunc() catch |err| return err;`
     //                                          so if it returns an error, code below here will not be executed.
+}
+
+fn UnwrappedType(comptime T: type) type {
+    const StructField = std.builtin.Type.StructField;
+    switch (@typeInfo(T)) {
+        .@"struct" => |struct_info| {
+            var unwrapped_fields: [struct_info.fields.len]StructField = undefined;
+            inline for (struct_info.fields, 0..) |field, i| {
+                switch (@typeInfo(field.type)) {
+                    .optional => |field_info| {
+                        unwrapped_fields[i] = .{
+                            .name = field.name,
+                            .type = field_info.child,
+                            .default_value_ptr = null,
+                            .is_comptime = false,
+                            .alignment = 0, // Meaningless for `.layout = .auto`.
+                        };
+                    },
+                    else => @compileError("all fields must be optional type!"),
+                }
+            }
+            return @Type(.{
+                .@"struct" = .{
+                    .layout = .auto,
+                    .fields = &unwrapped_fields,
+                    .decls = &.{},
+                    .is_tuple = true,
+                },
+            });
+        },
+        else => @compileError("parameter must be struct type!"),
+    }
+}
+
+fn unwrapAll(tuple: anytype) ?UnwrappedType(@TypeOf(tuple)) {
+    var result: UnwrappedType(@TypeOf(tuple)) = undefined;
+    inline for (tuple, 0..) |opt_field, i| {
+        if (opt_field) |field| {
+            result[i] = field;
+        } else {
+            break;
+        }
+    } else {
+        return result;
+    }
+    return null;
 }
