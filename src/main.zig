@@ -311,12 +311,12 @@ pub fn main() !void {
 
         h2("function pointer & alias");
         {
-            // Function pointer.
+            // Function pointer. (run-time)
             const f: *const fn () void = haha;
             f();
             console.printf("{s}\n", .{@typeName(@TypeOf(f))});
 
-            // Function alias.
+            // Function alias. (compile-time)
             const f2: fn () void = haha;
             f2();
             console.printf("{s}\n", .{@typeName(@TypeOf(f2))});
@@ -341,8 +341,8 @@ pub fn main() !void {
         h2("init array with ** operator");
         {
             const arr = [_]i64{ 1, 2, 3 } ** 3;
-            //                               ^^^^
-            //                               └> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
+            //                            ^^^^
+            //                            └> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
             console.printf("{any}\n", .{arr});
         }
 
@@ -366,13 +366,15 @@ pub fn main() !void {
             var slice = arr[0..]; // Slice is a pointer and a length. (Its length is known at runtime.)
             //              ^^^
             //              └> From index 0 to the end.
-            console.printf("arr1: {p}\n", .{&arr[0]});
-            console.printf("arr1_slice: {p}\n", .{&slice[0]});
-            slice[0] = 10;
-            for (slice, 0..) |item, i| {
-                console.printf("[{d}]: {d}\n", .{ i, item });
-            }
-            console.printf("arr[0]: {d}\n", .{&arr[0]});
+            //             [n..m]
+            //              ^^^^
+            //              └> From index n to m-1.
+
+            console.printf("&arr[0] == &slice[]: {}\n", .{&arr[0] == &slice[0]});
+
+            // https://zig.guide/language-basics/slices/
+            // When these n and m values are both known at compile time, slicing will actually produce a pointer to an array.
+            // This is not an issue as a pointer to an array i.e. *[N]T will coerce to a slice - []T.
 
             slice = &arr;
             //      ^^^^
