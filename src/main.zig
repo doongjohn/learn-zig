@@ -558,12 +558,11 @@ pub fn main() !void {
     h1("destructuring");
     {
         // Destructuring can be done with:
-        // * Tuples
-        // * Arrays
-        // * Vectors
+        // - Tuples
+        // - Arrays
+        // - Vectors
 
         const tuple = .{ @as(i32, 10), "hello" };
-        console.printf("{s}\n", .{@typeName(@TypeOf(tuple))});
         const num, const str = tuple;
         console.printf("num = {d}\n", .{num});
         console.printf("str = {s}\n", .{str});
