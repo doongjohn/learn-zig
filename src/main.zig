@@ -14,17 +14,17 @@ const win32 = if (builtin.os.tag == .windows) struct {
 };
 
 const console = struct {
-    var stdout: fs.File.Writer = undefined;
-    var stdin: fs.File.Reader = undefined;
+    var stdout: fs.File.DeprecatedWriter = undefined;
+    var stdin: fs.File.DeprecatedReader = undefined;
     var stdin_handle: fs.File.Handle = undefined;
 
     var orig_outputcp: if (builtin.os.tag == .windows)
         os.windows.UINT = undefined;
 
     pub fn init() void {
-        stdout = std.io.getStdOut().writer();
-        stdin = std.io.getStdIn().reader();
-        stdin_handle = std.io.getStdIn().handle;
+        stdout = std.fs.File.stdout().deprecatedWriter();
+        stdin = std.fs.File.stdin().deprecatedReader();
+        stdin_handle = std.fs.File.stdin().handle;
 
         if (builtin.os.tag == .windows) {
             orig_outputcp = os.windows.kernel32.GetConsoleOutputCP();
@@ -39,16 +39,16 @@ const console = struct {
     }
 
     pub fn print(str: []const u8) void {
-        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {!}", .{err});
+        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {}", .{err});
     }
 
     pub fn println(str: []const u8) void {
-        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {!}", .{err});
-        _ = stdout.writeByte('\n') catch |err| std.debug.panic("stdout.writeByte error: {!}", .{err});
+        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {}", .{err});
+        _ = stdout.writeByte('\n') catch |err| std.debug.panic("stdout.writeByte error: {}", .{err});
     }
 
     pub fn printf(comptime format: []const u8, args: anytype) void {
-        stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {!}", .{err});
+        stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {}", .{err});
     }
 
     const line_buf_size = 10000;
@@ -579,7 +579,7 @@ pub fn main() !void {
     {
         blk1: {
             returnError(true) catch |err| {
-                console.printf("{!}\n", .{err});
+                console.printf("{}\n", .{err});
                 break :blk1;
             };
             console.print("no error\n");
@@ -587,7 +587,7 @@ pub fn main() !void {
 
         blk2: {
             returnError(false) catch |err| {
-                console.printf("{!}\n", .{err});
+                console.printf("{}\n", .{err});
                 break :blk2;
             };
             console.print("no error\n");
