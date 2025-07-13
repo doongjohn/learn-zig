@@ -7,48 +7,47 @@ const fs = std.fs;
 // Cross-compiling to Windows:
 // zig build -Dtarget=x86_64-windows
 const win32 = if (builtin.os.tag == .windows) struct {
-    const win = std.os.windows;
+    const w = std.os.windows;
 
     // Windows API (Easy C interop!)
-    extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) bool;
+    extern "kernel32" fn ReadConsoleW(handle: w.HANDLE, buffer: [*]u16, len: w.DWORD, read: *w.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) bool;
 };
 
 const console = struct {
-    var stdout: fs.File.DeprecatedWriter = undefined;
-    var stdin: fs.File.DeprecatedReader = undefined;
-    var stdin_handle: fs.File.Handle = undefined;
+    var stdout: fs.File.Writer = undefined;
 
-    var orig_outputcp: if (builtin.os.tag == .windows)
-        os.windows.UINT = undefined;
+    var win_data: if (builtin.os.tag == .windows) struct {
+        stdin_handle: fs.File.Handle = undefined,
+        orig_outputcp: os.windows.UINT = undefined,
+    } = .{};
 
     pub fn init() void {
-        stdout = std.fs.File.stdout().deprecatedWriter();
-        stdin = std.fs.File.stdin().deprecatedReader();
-        stdin_handle = std.fs.File.stdin().handle;
+        stdout = std.fs.File.stdout().writerStreaming(&.{});
 
         if (builtin.os.tag == .windows) {
-            orig_outputcp = os.windows.kernel32.GetConsoleOutputCP();
+            win_data.stdin_handle = std.fs.File.stdin().handle;
+            win_data.orig_outputcp = os.windows.kernel32.GetConsoleOutputCP();
             _ = os.windows.kernel32.SetConsoleOutputCP(65001); // UTF8
         }
     }
 
     pub fn deinit() void {
         if (builtin.os.tag == .windows) {
-            _ = os.windows.kernel32.SetConsoleOutputCP(orig_outputcp);
+            _ = os.windows.kernel32.SetConsoleOutputCP(win_data.orig_outputcp);
         }
     }
 
     pub fn print(str: []const u8) void {
-        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {}", .{err});
+        _ = stdout.interface.write(str) catch |err| std.debug.panic("stdout.write error: {}", .{err});
     }
 
     pub fn println(str: []const u8) void {
-        _ = stdout.write(str) catch |err| std.debug.panic("stdout.write error: {}", .{err});
-        _ = stdout.writeByte('\n') catch |err| std.debug.panic("stdout.writeByte error: {}", .{err});
+        _ = stdout.interface.write(str) catch |err| std.debug.panic("stdout.write error: {}", .{err});
+        _ = stdout.interface.writeByte('\n') catch |err| std.debug.panic("stdout.writeByte error: {}", .{err});
     }
 
     pub fn printf(comptime format: []const u8, args: anytype) void {
-        stdout.print(format, args) catch |err| std.debug.panic("stdout.print error: {}", .{err});
+        stdout.interface.print(format, args) catch |err| std.debug.panic("stdout.print error: {}", .{err});
     }
 
     const line_buf_size = 10000;
@@ -61,18 +60,19 @@ const console = struct {
         switch (builtin.os.tag) {
             .windows => {
                 var utf16_read_count: u32 = undefined;
-                if (!win32.ReadConsoleW(stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
+                if (!win32.ReadConsoleW(win_data.stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
                     return error.ReadConsoleError;
 
                 const utf8_len = try std.unicode.utf16LeToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
                 //                               ^^^^^^^^^^^^^
                 //                               └> Windows uses utf16 so you need to convert it to utf8 to
                 //                                  make it friendly for zig std library.
-                return mem.trimRight(u8, utf8_line_buf[0..utf8_len], "\r\n");
-                //                                                    ^^^^ --> Trim windows '\r\n'.
+                return mem.trimEnd(u8, utf8_line_buf[0..utf8_len], "\r\n");
+                //                                                  ^^^^ --> Trim windows '\r\n'.
             },
             else => {
-                return mem.trimRight(u8, try stdin.readUntilDelimiter(&utf8_line_buf, '\n'), "\n");
+                var stdin_reader = fs.File.stdin().reader(&utf8_line_buf);
+                return try stdin_reader.interface.takeDelimiterExclusive('\n');
             },
         }
     }
@@ -89,7 +89,9 @@ pub fn h2(comptime text: []const u8) void {
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 
 pub fn main() !void {
-    // Init general purpose allocator
+    // Init general purpose allocator.
+    // You need to use a `c_allocator` for valgrind. (You need to link LibC.)
+    // const alloc = std.heap.c_allocator;
     const alloc, const is_debug = gpa: {
         if (builtin.os.tag == .wasi) break :gpa .{ std.heap.wasm_allocator, false };
         break :gpa switch (builtin.mode) {
@@ -101,9 +103,6 @@ pub fn main() !void {
         std.debug.assert(debug_allocator.deinit() == .ok);
         //                              ^^^^^^^^^^^^^^^^ --> Detect memory leak.
     };
-
-    // You need to use a `c_allocator` for valgrind. (You need to link LibC.)
-    // const alloc = std.heap.c_allocator;
 
     console.init();
     defer console.deinit();
