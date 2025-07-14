@@ -21,6 +21,10 @@ const console = struct {
         orig_outputcp: os.windows.UINT = undefined,
     } = .{};
 
+    const line_buf_size = 512;
+    var utf8_line_buf = [_]u8{0} ** line_buf_size;
+    var utf16_line_buf = [_]u16{0} ** line_buf_size;
+
     pub fn init() void {
         stdout = std.fs.File.stdout().writerStreaming(&.{});
 
@@ -50,12 +54,8 @@ const console = struct {
         stdout.interface.print(format, args) catch |err| std.debug.panic("stdout.print error: {}", .{err});
     }
 
-    const line_buf_size = 10000;
-    var utf8_line_buf: [line_buf_size]u8 = .{0} ** line_buf_size;
-    var utf16_line_buf: [line_buf_size]u16 = .{0} ** line_buf_size;
-
-    /// This function uses one buffer for storing the input string.
-    /// You need to copy it if you want to keep the string reference.
+    /// This function stores the input string in a global buffer.
+    /// You need to copy the result if you want to extend its lifetime.
     pub fn readLine() ![]const u8 {
         switch (builtin.os.tag) {
             .windows => {
@@ -71,7 +71,7 @@ const console = struct {
                 //                                                  ^^^^ --> Trim windows '\r\n'.
             },
             else => {
-                var stdin_reader = fs.File.stdin().reader(&utf8_line_buf);
+                var stdin_reader = fs.File.stdin().readerStreaming(&utf8_line_buf);
                 return try stdin_reader.interface.takeDelimiterExclusive('\n');
             },
         }
