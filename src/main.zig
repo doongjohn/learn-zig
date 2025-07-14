@@ -18,7 +18,6 @@ const console = struct {
 
     var win_data: if (builtin.os.tag == .windows) struct {
         stdin_handle: fs.File.Handle = undefined,
-        orig_outputcp: os.windows.UINT = undefined,
     } = .{};
 
     const line_buf_size = 512;
@@ -30,14 +29,7 @@ const console = struct {
 
         if (builtin.os.tag == .windows) {
             win_data.stdin_handle = std.fs.File.stdin().handle;
-            win_data.orig_outputcp = os.windows.kernel32.GetConsoleOutputCP();
             _ = os.windows.kernel32.SetConsoleOutputCP(65001); // UTF8
-        }
-    }
-
-    pub fn deinit() void {
-        if (builtin.os.tag == .windows) {
-            _ = os.windows.kernel32.SetConsoleOutputCP(win_data.orig_outputcp);
         }
     }
 
@@ -105,7 +97,6 @@ pub fn main() !void {
     };
 
     console.init();
-    defer console.deinit();
 
     h1("terminal io");
     {
