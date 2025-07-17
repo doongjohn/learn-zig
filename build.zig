@@ -13,6 +13,7 @@ pub fn build(b: *std.Build) void {
         .name = "learn_zig",
         .root_module = exe_mod,
     });
+    exe_mod.addRPathSpecial("$ORIGIN/../lib");
     b.installArtifact(exe);
 
     const hello_mod = b.createModule(.{
