@@ -9,8 +9,10 @@
 
 ## Notes
 
-- C optimization levels when using `build.zig` to build a C source file
-    - <https://ziggit.dev/t/c-optimization-levels/140>
+- Easy cross-compile.
+    - `zig build -Dtarget=x86_64-linux-gnu`
+    - `zig build -Dtarget=x86_64-windows-gnu`
+    - `zig build -Dtarget=x86_64-windows-msvc`
 
 - `zig cc` without generating the pdb
     - <https://ziggit.dev/t/how-to-use-zig-cc-without-generating-a-pdb-file/2873>

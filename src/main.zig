@@ -4,8 +4,10 @@ const mem = std.mem;
 const os = std.os;
 const fs = std.fs;
 
-// Cross-compiling to Windows:
-// zig build -Dtarget=x86_64-windows
+const hello = struct {
+    extern fn hello() void;
+};
+
 const win32 = if (builtin.os.tag == .windows) struct {
     const w = std.os.windows;
 
@@ -81,6 +83,13 @@ pub fn h2(comptime text: []const u8) void {
 var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
 
 pub fn main() !void {
+    console.init();
+
+    h1("C interop");
+    {
+        hello.hello();
+    }
+
     // Init general purpose allocator.
     // You need to use a `c_allocator` for valgrind. (You need to link LibC.)
     // const alloc = std.heap.c_allocator;
@@ -95,8 +104,6 @@ pub fn main() !void {
         std.debug.assert(debug_allocator.deinit() == .ok);
         //                              ^^^^^^^^^^^^^^^^ --> Detect memory leak.
     };
-
-    console.init();
 
     h1("terminal io");
     {

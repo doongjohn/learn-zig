@@ -9,13 +9,29 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-
     const exe = b.addExecutable(.{
         .name = "learn_zig",
         .root_module = exe_mod,
     });
-
     b.installArtifact(exe);
+
+    const hello_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    const hello = b.addLibrary(.{
+        .name = "hello",
+        .root_module = hello_mod,
+        .linkage = .dynamic,
+    });
+    hello.addCSourceFiles(.{
+        .files = &.{"src/hello.c"},
+        .flags = &.{},
+    });
+    b.installArtifact(hello);
+
+    exe.linkLibrary(hello);
 
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
