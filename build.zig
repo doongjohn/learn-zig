@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&(blk: {
         const run_cmd = b.addRunArtifact(exe);
         run_cmd.step.dependOn(b.getInstallStep());
-        if (b.args) |args| run_cmd.addArgs(args);
+        run_cmd.addArgs(b.args orelse &.{});
         break :blk run_cmd;
     }).step);
 
