@@ -4,6 +4,7 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // Target: exe
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
@@ -14,42 +15,52 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
     exe_mod.addRPathSpecial("$ORIGIN/../lib");
-    b.installArtifact(exe);
 
-    const hello_mod = b.createModule(.{
-        .target = target,
-        .optimize = optimize,
-        .link_libc = true,
-    });
+    // Target: hello
     const hello = b.addLibrary(.{
         .name = "hello",
-        .root_module = hello_mod,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
         .linkage = .dynamic,
     });
     hello.addCSourceFiles(.{
         .files = &.{"src/hello.c"},
         .flags = &.{},
     });
-    b.installArtifact(hello);
 
+    // Link libraries
     exe.linkLibrary(hello);
 
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(b.getInstallStep());
+    // Install artifacts
+    b.installArtifact(hello);
+    b.installArtifact(exe);
 
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
-
+    // Run exe
     const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    run_step.dependOn(&(blk: {
+        const run_cmd = b.addRunArtifact(exe);
+        run_cmd.step.dependOn(b.getInstallStep());
+        if (b.args) |args| run_cmd.addArgs(args);
+        break :blk run_cmd;
+    }).step);
 
-    const exe_unit_tests = b.addTest(.{
+    // Tests
+    const exe_unit_tests = b.addRunArtifact(b.addTest(.{
         .root_module = exe_mod,
-    });
+    }));
 
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+    const wow_unit_tests = b.addRunArtifact(b.addTest(.{
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/wow.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    }));
 
     const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_exe_unit_tests.step);
+    test_step.dependOn(&exe_unit_tests.step);
+    test_step.dependOn(&wow_unit_tests.step);
 }
