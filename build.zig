@@ -38,6 +38,17 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(hello);
     b.installArtifact(exe);
 
+    // Custom build step
+    // zig build wow
+    const wow_step = b.step("wow", "Custom step");
+    wow_step.makeFn = (struct {
+        fn make(step: *std.Build.Step, options: std.Build.Step.MakeOptions) !void {
+            _ = step;
+            _ = options;
+            std.log.info("Running wow step.", .{});
+        }
+    }).make;
+
     // Run exe
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&(blk: {
