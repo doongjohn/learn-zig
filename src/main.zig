@@ -11,7 +11,6 @@ const hello = struct {
 const win32 = if (builtin.os.tag == .windows) struct {
     const w = std.os.windows;
 
-    // Windows API (Easy C interop!)
     extern "kernel32" fn ReadConsoleW(handle: w.HANDLE, buffer: [*]u16, len: w.DWORD, read: *w.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) bool;
 };
 
