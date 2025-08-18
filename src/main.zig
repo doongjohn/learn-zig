@@ -433,11 +433,11 @@ pub fn main() !void {
         h2("std.ArrayList");
         {
             // You can use `ArrayList(u8)` as String builder.
-            var str_builder = std.ArrayList(u8).init(alloc);
-            defer str_builder.deinit();
-            try str_builder.appendSlice("wow ");
-            try str_builder.appendSlice("this is cool! ");
-            try str_builder.appendSlice("super power!");
+            var str_builder = try std.ArrayList(u8).initCapacity(alloc, 0);
+            defer str_builder.deinit(alloc);
+            try str_builder.appendSlice(alloc, "wow ");
+            try str_builder.appendSlice(alloc, "this is cool! ");
+            try str_builder.appendSlice(alloc, "super power!");
             console.printf("{s}\n", .{str_builder.items});
         }
 
