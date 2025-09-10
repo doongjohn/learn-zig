@@ -17,7 +17,7 @@ const win32 = if (builtin.os.tag == .windows) struct {
 const console = struct {
     var stdout: fs.File.Writer = undefined;
 
-    var win_data: if (builtin.os.tag == .windows) struct {
+    var windows: if (builtin.os.tag == .windows) struct {
         stdin_handle: fs.File.Handle = undefined,
     } = .{};
 
@@ -29,7 +29,7 @@ const console = struct {
         stdout = std.fs.File.stdout().writerStreaming(&.{});
 
         if (builtin.os.tag == .windows) {
-            win_data.stdin_handle = std.fs.File.stdin().handle;
+            windows.stdin_handle = std.fs.File.stdin().handle;
             _ = os.windows.kernel32.SetConsoleOutputCP(65001); // UTF8
         }
     }
@@ -52,8 +52,8 @@ const console = struct {
     pub fn readLine() ![]const u8 {
         switch (builtin.os.tag) {
             .windows => {
-                var utf16_read_count: u32 = undefined;
-                if (!win32.ReadConsoleW(win_data.stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
+                var utf16_read_count: u32 = 0;
+                if (!win32.ReadConsoleW(windows.stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
                     return error.ReadConsoleError;
 
                 const utf8_len = try std.unicode.utf16LeToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
@@ -61,11 +61,11 @@ const console = struct {
                 //                               └> Windows uses utf16 so you need to convert it to utf8 to
                 //                                  make it friendly for zig std library.
                 return mem.trimEnd(u8, utf8_line_buf[0..utf8_len], "\r\n");
-                //                                                  ^^^^ --> Trim windows '\r\n'.
+                //                                                  ^^^^ --> Trim windows "\r\n".
             },
             else => {
-                var stdin_reader = fs.File.stdin().readerStreaming(&utf8_line_buf);
-                return try stdin_reader.interface.takeDelimiterExclusive('\n');
+                var stdin = fs.File.stdin().readerStreaming(&utf8_line_buf);
+                return try stdin.interface.takeDelimiterExclusive('\n');
             },
         }
     }
@@ -614,7 +614,7 @@ pub fn main() !void {
     h1("refiy type");
     {
         // Type can be created at compile-time.
-        // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L259
+        // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L518
         const MyInt = @Type(.{ .int = .{
             .signedness = .signed,
             .bits = 32,
