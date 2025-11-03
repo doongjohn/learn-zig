@@ -15,6 +15,7 @@ const win32 = if (builtin.os.tag == .windows) struct {
 };
 
 const console = struct {
+    var io: std.Io = undefined;
     var stdout: fs.File.Writer = undefined;
 
     var windows: if (builtin.os.tag == .windows) struct {
@@ -25,7 +26,8 @@ const console = struct {
     var utf8_line_buf = [_]u8{0} ** line_buf_size;
     var utf16_line_buf = [_]u16{0} ** line_buf_size;
 
-    pub fn init() void {
+    pub fn init(in_io: std.Io) void {
+        io = in_io;
         stdout = std.fs.File.stdout().writerStreaming(&.{});
 
         if (builtin.os.tag == .windows) {
@@ -64,7 +66,7 @@ const console = struct {
                 //                                                  ^^^^ --> Trim windows "\r\n".
             },
             else => {
-                var stdin = fs.File.stdin().readerStreaming(&utf8_line_buf);
+                var stdin = fs.File.stdin().readerStreaming(io, &utf8_line_buf);
                 return try stdin.interface.takeDelimiterExclusive('\n');
             },
         }
@@ -79,10 +81,11 @@ pub fn h2(comptime text: []const u8) void {
     console.println("\n\x1b[;32m" ++ "## " ++ text ++ "\x1b[0m");
 }
 
-var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-
 pub fn main() !void {
-    console.init();
+    var io: std.Io.Threaded = .init_single_threaded;
+    defer io.deinit();
+
+    console.init(io.io());
 
     h1("C interop");
     {
@@ -91,7 +94,7 @@ pub fn main() !void {
 
     // Init general purpose allocator.
     // You need to use a `c_allocator` for valgrind. (You need to link LibC.)
-    // const alloc = std.heap.c_allocator;
+    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
     const alloc, const is_debug = gpa: {
         if (builtin.os.tag == .wasi) break :gpa .{ std.heap.wasm_allocator, false };
         break :gpa switch (builtin.mode) {
@@ -646,7 +649,7 @@ pub fn main() !void {
 
     h1("random");
     {
-        const seed: u64 = @intCast(std.time.timestamp());
+        const seed: u64 = @intCast((try std.time.Instant.now()).timestamp.nsec);
         var rng = std.Random.DefaultPrng.init(seed);
         const random = rng.random();
 
