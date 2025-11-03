@@ -82,10 +82,11 @@ pub fn h2(comptime text: []const u8) void {
 }
 
 pub fn main() !void {
-    var io: std.Io.Threaded = .init_single_threaded;
-    defer io.deinit();
+    var io_threaded: std.Io.Threaded = .init_single_threaded;
+    defer io_threaded.deinit();
+    const io = io_threaded.io();
 
-    console.init(io.io());
+    console.init(io);
 
     h1("C interop");
     {
@@ -649,7 +650,7 @@ pub fn main() !void {
 
     h1("random");
     {
-        const seed: u64 = @intCast((try std.time.Instant.now()).timestamp.nsec);
+        const seed: u64 = @bitCast((try std.Io.Clock.now(.real, io)).toSeconds());
         var rng = std.Random.DefaultPrng.init(seed);
         const random = rng.random();
 
