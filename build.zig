@@ -17,22 +17,23 @@ pub fn build(b: *std.Build) void {
     exe_mod.addRPathSpecial("$ORIGIN/../lib");
 
     // Target: hello
-    const hello = b.addLibrary(.{
-        .name = "hello",
-        .root_module = b.createModule(.{
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        }),
-        .linkage = .dynamic,
+    const hello_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
     });
-    hello.addCSourceFiles(.{
+    hello_mod.addCSourceFiles(.{
         .files = &.{"src/hello.c"},
         .flags = &.{},
     });
+    const hello = b.addLibrary(.{
+        .name = "hello",
+        .root_module = hello_mod,
+        .linkage = .dynamic,
+    });
 
     // Link libraries
-    exe.linkLibrary(hello);
+    exe_mod.linkLibrary(hello);
 
     // Install artifacts
     b.installArtifact(hello);

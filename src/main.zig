@@ -2,37 +2,43 @@ const builtin = @import("builtin");
 const std = @import("std");
 const mem = std.mem;
 const os = std.os;
-const fs = std.fs;
 
 const hello = struct {
     extern fn hello() void;
 };
 
 const win32 = if (builtin.os.tag == .windows) struct {
-    const w = std.os.windows;
+    const w = os.windows;
 
-    extern "kernel32" fn ReadConsoleW(handle: w.HANDLE, buffer: [*]u16, len: w.DWORD, read: *w.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) bool;
+    extern "kernel32" fn SetConsoleOutputCP(wCodePageID: w.UINT) callconv(.winapi) w.BOOL;
+    extern "kernel32" fn ReadConsoleW(handle: w.HANDLE, buffer: [*]u16, len: w.DWORD, read: *w.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) w.BOOL;
 };
 
 const console = struct {
-    var io: std.Io = undefined;
-    var stdout: fs.File.Writer = undefined;
+    var stdout: std.Io.File.Writer = undefined;
+    var stdin_buf: [256]u8 = @splat(0);
 
     var windows: if (builtin.os.tag == .windows) struct {
-        stdin_handle: fs.File.Handle = undefined,
+        stdin_handle: std.Io.File.Handle = undefined,
+        stdin_buf_u16: [stdin_buf.len]u16 = @splat(0),
     } = .{};
 
-    const line_buf_size = 512;
-    var utf8_line_buf = [_]u8{0} ** line_buf_size;
-    var utf16_line_buf = [_]u16{0} ** line_buf_size;
+    var posix: if (builtin.os.tag != .windows) struct {
+        stdin: std.Io.File.Reader = undefined,
+    } = .{};
 
-    pub fn init(in_io: std.Io) void {
-        io = in_io;
-        stdout = std.fs.File.stdout().writerStreaming(&.{});
+    pub fn init(io: std.Io) void {
+        stdout = std.Io.File.stdout().writerStreaming(io, &.{});
 
-        if (builtin.os.tag == .windows) {
-            windows.stdin_handle = std.fs.File.stdin().handle;
-            _ = os.windows.kernel32.SetConsoleOutputCP(65001); // UTF8
+        switch (builtin.os.tag) {
+            .windows => {
+                windows.stdin_handle = std.Io.File.stdin().handle;
+                const CP_UTF8 = 65001;
+                _ = win32.SetConsoleOutputCP(CP_UTF8);
+            },
+            else => {
+                posix.stdin = std.Io.File.stdin().readerStreaming(io, &stdin_buf);
+            }
         }
     }
 
@@ -54,20 +60,43 @@ const console = struct {
     pub fn readLine() ![]const u8 {
         switch (builtin.os.tag) {
             .windows => {
-                var utf16_read_count: u32 = 0;
-                if (!win32.ReadConsoleW(windows.stdin_handle, &utf16_line_buf, line_buf_size, &utf16_read_count, null))
+                var read_count: u32 = 0;
+                if (!win32.ReadConsoleW(windows.stdin_handle, &windows.stdin_buf_u16, windows.stdin_buf_u16.len, &read_count, null).toBool())
                     return error.ReadConsoleError;
 
-                const utf8_len = try std.unicode.utf16LeToUtf8(&utf8_line_buf, utf16_line_buf[0..utf16_read_count]);
-                //                               ^^^^^^^^^^^^^
-                //                               └> Windows uses utf16 so you need to convert it to utf8 to
-                //                                  make it friendly for zig std library.
-                return mem.trimEnd(u8, utf8_line_buf[0..utf8_len], "\r\n");
-                //                                                  ^^^^ --> Trim windows "\r\n".
+                var pos: usize = 0;
+                var high_surrogate: u16 = 0;
+                var utf8_char_buf: [4]u8 = @splat(0);
+
+                for (windows.stdin_buf_u16[0..read_count]) |utf16_char| {
+                    if (pos >= stdin_buf.len) {
+                        break;
+                    }
+
+                    if (high_surrogate == 0 and std.unicode.utf16IsHighSurrogate(utf16_char)) {
+                        high_surrogate = utf16_char;
+                        continue;
+                    }
+
+                    var len: usize = 0;
+                    if (high_surrogate != 0 and std.unicode.utf16IsLowSurrogate(utf16_char)) {
+                        len = try std.unicode.utf16LeToUtf8(&utf8_char_buf, &.{ high_surrogate, utf16_char });
+                        high_surrogate = 0;
+                    } else {
+                        len = try std.unicode.utf16LeToUtf8(&utf8_char_buf, &.{utf16_char});
+                    }
+
+                    if (pos + len <= stdin_buf.len) {
+                        @memcpy(stdin_buf[pos .. pos + len], utf8_char_buf[0..len]);
+                        pos += len;
+                    }
+                }
+
+                return mem.trimEnd(u8, stdin_buf[0..pos], "\r\n");
+                //                                         ^^^^ --> Trim windows "\r\n".
             },
             else => {
-                var stdin = fs.File.stdin().readerStreaming(io, &utf8_line_buf);
-                return try stdin.interface.takeDelimiterExclusive('\n');
+                return try posix.stdin.interface.takeDelimiterExclusive('\n');
             },
         }
     }
@@ -81,10 +110,9 @@ pub fn h2(comptime text: []const u8) void {
     console.println("\n\x1b[;32m" ++ "## " ++ text ++ "\x1b[0m");
 }
 
-pub fn main() !void {
-    var io_threaded: std.Io.Threaded = .init_single_threaded;
-    defer io_threaded.deinit();
-    const io = io_threaded.io();
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const alloc = init.gpa;
 
     console.init(io);
 
@@ -93,21 +121,6 @@ pub fn main() !void {
         hello.hello();
     }
 
-    // Init general purpose allocator.
-    // You need to use a `c_allocator` for valgrind. (You need to link LibC.)
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    const alloc, const is_debug = gpa: {
-        if (builtin.os.tag == .wasi) break :gpa .{ std.heap.wasm_allocator, false };
-        break :gpa switch (builtin.mode) {
-            .Debug, .ReleaseSafe => .{ debug_allocator.allocator(), true },
-            .ReleaseFast, .ReleaseSmall => .{ std.heap.smp_allocator, false },
-        };
-    };
-    defer if (is_debug) {
-        std.debug.assert(debug_allocator.deinit() == .ok);
-        //                              ^^^^^^^^^^^^^^^^ --> Detect memory leak.
-    };
-
     h1("terminal io");
     {
         console.print(">> terminal input: ");
@@ -115,7 +128,7 @@ pub fn main() !void {
         //                                                  ^^^ --> trim whitespace
         console.printf("input = {s}\n", .{input});
         console.printf("byte length = {d}\n", .{input.len});
-        console.printf("unicode length = {d}\n", .{try std.unicode.utf8CountCodepoints(input)});
+        console.printf("utf8 codepoint length = {d}\n", .{try std.unicode.utf8CountCodepoints(input)});
     }
 
     h1("variable");
@@ -341,16 +354,20 @@ pub fn main() !void {
         h2("init array with ** operator");
         {
             const arr = [_]i64{ 1, 2, 3 } ** 3;
-            //                            ^^^^
-            //                            └> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
+            //                ^^^^^^^^^^^^^^^^
+            //                └> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
             console.printf("{any}\n", .{arr});
         }
 
         h2("assigning array to array");
         {
             var a1 = [_]i32{ 0, 0, 0 };
-            var a2 = a1; // Array gets copied when assigned.
+            var a2 = a1; // Arrays are copied when assigned.
             console.printf("a1: {p} != a2: {p}\n", .{ &a1[0], &a2[0] });
+
+            // You can use this value semantics to copy a string literal into a variable.
+            const str = "string on stack".*;
+            console.printf("{s}\n", .{str});
         }
 
         h2("concat array compile-time");
@@ -363,12 +380,14 @@ pub fn main() !void {
         h2("slice");
         {
             var arr = [_]i32{ 0, 0, 0 };
-            var slice = arr[0..]; // Slice is a pointer and a length. (Its length is known at runtime.)
-            //              ^^^
-            //              └> From index 0 to the end.
-            //             [n..m]
-            //              ^^^^
-            //              └> From index n to m-1.
+
+            // Slice is a pointer and a length. (Its length is known at runtime.)
+            var slice: []i32 = arr[0..];
+            //                     ^^^
+            //                     └> From index 0 to the end.
+            //                    [n..m]
+            //                     ^^^^
+            //                     └> From index n to m-1.
 
             console.printf("&arr[0] == &slice[]: {}\n", .{&arr[0] == &slice[0]});
 
@@ -384,9 +403,10 @@ pub fn main() !void {
         h2("pointer to array");
         {
             const arr = [_]i64{ 1, 2, 3 };
-            const arr_ptr = &arr; // Pointer to an array.
-            console.printf("{s}\n", .{@typeName(@TypeOf(arr))});
-            console.printf("{s}\n", .{@typeName(@TypeOf(arr_ptr))});
+            const arr_ptr: *const [3]i64 = &arr; // Pointer to an array.
+
+            // Zig allows iteration over a pointer to array.
+            // So you don't need to write `arr_ptr.*`.
             for (arr_ptr, 0..) |item, i| {
                 console.printf("[{d}]: {d}\n", .{ i, item });
             }
@@ -434,17 +454,6 @@ pub fn main() !void {
             console.printf("concated: {s}\nlength: {d}\n", .{ concated, concated.len });
         }
 
-        h2("std.ArrayList");
-        {
-            // You can use `ArrayList(u8)` as String builder.
-            var str_builder = try std.ArrayList(u8).initCapacity(alloc, 0);
-            defer str_builder.deinit(alloc);
-            try str_builder.appendSlice(alloc, "wow ");
-            try str_builder.appendSlice(alloc, "this is cool! ");
-            try str_builder.appendSlice(alloc, "super power!");
-            console.printf("{s}\n", .{str_builder.items});
-        }
-
         h2("string");
         {
             // Strings are just array of u8.
@@ -469,6 +478,19 @@ pub fn main() !void {
                 \\
             ;
             console.print(msg);
+        }
+
+        h2("std.ArrayList");
+        {
+            // You can use `ArrayList(u8)` as a string builder.
+            var str_builder = try std.ArrayList(u8).initCapacity(alloc, 0);
+            defer str_builder.deinit(alloc);
+
+            try str_builder.appendSlice(alloc, "wow ");
+            try str_builder.appendSlice(alloc, "this is cool! ");
+            try str_builder.appendSlice(alloc, "super power!");
+
+            console.printf("{s}\n", .{str_builder.items});
         }
     }
 
@@ -615,19 +637,16 @@ pub fn main() !void {
         console.printf("after closure: a = {d}\n", .{a});
     }
 
-    h1("refiy type");
+    h1("reify type");
     {
         // Type can be created at compile-time.
         // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L518
-        const MyInt = @Type(.{ .int = .{
-            .signedness = .signed,
-            .bits = 32,
-        } });
+        const MyInt = @Int(.signed, 32);
 
         const n: MyInt = 20;
         console.printf("{d}\n", .{n});
 
-        // Multiple unwrap using refiy type.
+        // Multiple unwrap using reify type.
         var opt_a: ?i32 = null;
         const opt_b: ?f32 = 2.2;
         if (unwrapAll(.{ opt_a, opt_b })) |unwrapped| {
@@ -650,7 +669,7 @@ pub fn main() !void {
 
     h1("random");
     {
-        const seed: u64 = @bitCast((try std.Io.Clock.now(.real, io)).toSeconds());
+        const seed: u64 = @bitCast(std.Io.Clock.now(.real, io).toSeconds());
         var rng = std.Random.DefaultPrng.init(seed);
         const random = rng.random();
 
@@ -721,32 +740,18 @@ fn returnError(return_error: bool) !void {
 }
 
 fn UnwrappedType(comptime T: type) type {
-    const StructField = std.builtin.Type.StructField;
     switch (@typeInfo(T)) {
         .@"struct" => |struct_info| {
-            var unwrapped_fields: [struct_info.fields.len]StructField = undefined;
+            var unwrapped_fields: [struct_info.fields.len]type = undefined;
             inline for (struct_info.fields, 0..) |field, i| {
                 switch (@typeInfo(field.type)) {
                     .optional => |field_info| {
-                        unwrapped_fields[i] = .{
-                            .name = field.name,
-                            .type = field_info.child,
-                            .default_value_ptr = null,
-                            .is_comptime = false,
-                            .alignment = 0, // Meaningless for `.layout = .auto`.
-                        };
+                        unwrapped_fields[i] = field_info.child;
                     },
                     else => @compileError("all fields must be optional type!"),
                 }
             }
-            return @Type(.{
-                .@"struct" = .{
-                    .layout = .auto,
-                    .fields = &unwrapped_fields,
-                    .decls = &.{},
-                    .is_tuple = true,
-                },
-            });
+            return @Tuple(&unwrapped_fields);
         },
         else => @compileError("parameter must be struct type!"),
     }
