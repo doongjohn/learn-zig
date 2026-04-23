@@ -415,7 +415,20 @@ pub fn main(init: std.process.Init) !void {
         h2("@memset");
         {
             var arr: [3]i64 = undefined;
-            @memset(&arr, 3); // --> Set every elements in the array to 3.
+            @memset(&arr, 3); // --> Sets every element in the array to 3.
+            for (arr, 0..) |item, i| {
+                console.printf("[{d}]: {d}\n", .{ i, item });
+            }
+        }
+
+        h2("@splat");
+        {
+            const arr: [3]i64 = @splat(3);
+            //                  ^^^^^^^^^ --> Sets every element in the array to 3.
+            //                                Unlike @memset(), which operates at runtime,
+            //                                @splat() generates fully initialized data at compile time
+            //                                and embeds it in the output binary. Which can increase binary size.
+            //                                https://ziggit.dev/t/if-you-had-one-wish-for-zig-what-would-it-be/15069/42
             for (arr, 0..) |item, i| {
                 console.printf("[{d}]: {d}\n", .{ i, item });
             }
