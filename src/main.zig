@@ -38,7 +38,7 @@ const console = struct {
             },
             else => {
                 posix.stdin = std.Io.File.stdin().readerStreaming(io, &stdin_buf);
-            }
+            },
         }
     }
 
@@ -102,11 +102,11 @@ const console = struct {
     }
 };
 
-pub fn h1(comptime text: []const u8) void {
+fn h1(comptime text: []const u8) void {
     console.println("\n\x1b[;92m" ++ "# " ++ text ++ "\x1b[0m");
 }
 
-pub fn h2(comptime text: []const u8) void {
+fn h2(comptime text: []const u8) void {
     console.println("\n\x1b[;32m" ++ "## " ++ text ++ "\x1b[0m");
 }
 
@@ -351,14 +351,6 @@ pub fn main(init: std.process.Init) !void {
             }
         }
 
-        h2("init array with ** operator");
-        {
-            const arr = [_]i64{ 1, 2, 3 } ** 3;
-            //                ^^^^^^^^^^^^^^^^
-            //                └> This will create: { 1, 2, 3, 1, 2, 3, 1, 2, 3 } at compile-time.
-            console.printf("{any}\n", .{arr});
-        }
-
         h2("assigning array to array");
         {
             var a1 = [_]i32{ 0, 0, 0 };
@@ -432,6 +424,12 @@ pub fn main(init: std.process.Init) !void {
             for (arr, 0..) |item, i| {
                 console.printf("[{d}]: {d}\n", .{ i, item });
             }
+        }
+
+        h2("create array from pattern");
+        {
+            const arr = arrayFromPattern([5]i32, &.{ 1, 2, 3 });
+            console.printf("{any}\n", .{arr});
         }
 
         h2("heap allocated array");
@@ -691,6 +689,16 @@ pub fn main(init: std.process.Init) !void {
             console.printf("random 1 ~ 10 => {}\n", .{num});
         }
     }
+}
+
+fn arrayFromPattern(comptime T: type, pattern: []const std.meta.Child(T)) T {
+    var arr: T = undefined;
+    var i: usize = 0;
+    while (i < arr.len) : (i += pattern.len) {
+        const len = @min(arr.len - i, pattern.len);
+        std.mem.copyForwards(std.meta.Child(T), arr[i..][0..len], pattern[0..len]);
+    }
+    return arr;
 }
 
 fn haha() void {
