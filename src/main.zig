@@ -696,7 +696,7 @@ fn arrayFromPattern(comptime T: type, pattern: []const std.meta.Child(T)) T {
     var i: usize = 0;
     while (i < arr.len) : (i += pattern.len) {
         const len = @min(arr.len - i, pattern.len);
-        std.mem.copyForwards(std.meta.Child(T), arr[i..][0..len], pattern[0..len]);
+        @memcpy(arr[i..][0..len], pattern[0..len]);
     }
     return arr;
 }
