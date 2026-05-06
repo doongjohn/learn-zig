@@ -474,13 +474,13 @@ pub fn main(init: std.process.Init) !void {
             console.println(yay[0..]);
             console.printf("{s}\n", .{@typeName(@TypeOf(yay))});
 
-            // String literals are const slice to null terminated u8 array.
+            // String literals are pointer to a const null terminated u8 array.
             // - https://zig.news/kristoff/what-s-a-string-literal-in-zig-31e9
             // - https://zig.news/david_vanderson/beginner-s-notes-on-slices-arrays-strings-5b67
             const str_lit = "this is a string literal";
             console.printf("{s}\n", .{@typeName(@TypeOf(str_lit))});
-            // (&str_lit[0]).* = 'A'; // <-- This is compile-time error because it's a const slice.
-            //                               Very nice!
+            // str_lit[0] = 'A'; // <-- This is compile-time error because it's a const pointer.
+            // (&str_lit[0]).* = 'A'; // <-- Same error. Very nice!
 
             // Multiline string literal.
             const msg =
