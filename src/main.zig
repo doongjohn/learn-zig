@@ -760,34 +760,30 @@ fn returnError(return_error: bool) !void {
     //                                          so if it returns an error, code below here will not be executed.
 }
 
-fn UnwrappedType(comptime T: type) type {
-    switch (@typeInfo(T)) {
-        .@"struct" => |struct_info| {
-            var unwrapped_fields: [struct_info.fields.len]type = undefined;
-            inline for (struct_info.fields, 0..) |field, i| {
-                switch (@typeInfo(field.type)) {
-                    .optional => |field_info| {
-                        unwrapped_fields[i] = field_info.child;
-                    },
-                    else => @compileError("all fields must be optional type!"),
-                }
-            }
-            return @Tuple(&unwrapped_fields);
-        },
-        else => @compileError("parameter must be struct type!"),
+fn UnwrappedTuple(comptime T: type) type {
+    const info = @typeInfo(T);
+    if (info != .@"struct") {
+        @compileError("parameter must be a struct type");
     }
+
+    const fields = info.@"struct".fields;
+    var unwrapped: [fields.len]type = undefined;
+
+    inline for (fields, 0..) |field, i| {
+        const field_info = @typeInfo(field.type);
+        if (field_info != .optional) {
+            @compileError("all fields must be optional types");
+        }
+        unwrapped[i] = field_info.optional.child;
+    }
+
+    return @Tuple(&unwrapped);
 }
 
-fn unwrapAll(tuple: anytype) ?UnwrappedType(@TypeOf(tuple)) {
-    var result: UnwrappedType(@TypeOf(tuple)) = undefined;
-    inline for (tuple, 0..) |opt_field, i| {
-        if (opt_field) |field| {
-            result[i] = field;
-        } else {
-            break;
-        }
-    } else {
-        return result;
+fn unwrapAll(tuple: anytype) ?UnwrappedTuple(@TypeOf(tuple)) {
+    var result: UnwrappedTuple(@TypeOf(tuple)) = undefined;
+    inline for (tuple, 0..) |opt, i| {
+        result[i] = opt orelse return null;
     }
-    return null;
+    return result;
 }
