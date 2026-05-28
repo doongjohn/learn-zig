@@ -3,9 +3,7 @@ const std = @import("std");
 const mem = std.mem;
 const os = std.os;
 
-const hello = struct {
-    extern fn hello() void;
-};
+const hello = @import("hello");
 
 const win32 = if (builtin.os.tag == .windows) struct {
     const w = os.windows;
@@ -118,7 +116,7 @@ pub fn main(init: std.process.Init) !void {
 
     h1("C interop");
     {
-        hello.hello();
+        hello.say_hello();
     }
 
     h1("terminal io");

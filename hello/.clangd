@@ -1,0 +1,6 @@
+# https://github.com/clangd/clangd/issues/1038
+CompileFlags:
+  Add: [
+    -DHELLO_STATIC,
+    -Iinclude
+  ]

@@ -22,15 +22,24 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
+    hello_mod.addIncludePath(b.path("hello/include"));
     hello_mod.addCSourceFiles(.{
-        .files = &.{"src/hello.c"},
-        .flags = &.{},
+        .files = &.{"hello/src/hello.c"},
+        .flags = &.{"-DHELLO_SHARED"},
     });
     const hello = b.addLibrary(.{
         .name = "hello",
         .root_module = hello_mod,
         .linkage = .dynamic,
     });
+    const hello_c = b.addTranslateC(.{
+        .root_source_file = b.path("hello/include/hello.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // Add imports
+    exe_mod.addImport("hello", hello_c.createModule());
 
     // Link libraries
     exe_mod.linkLibrary(hello);
@@ -52,12 +61,12 @@ pub fn build(b: *std.Build) void {
 
     // Run exe
     const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&(blk: {
+    run_step.dependOn((blk: {
         const run_cmd = b.addRunArtifact(exe);
         run_cmd.step.dependOn(b.getInstallStep());
         run_cmd.addArgs(b.args orelse &.{});
-        break :blk run_cmd;
-    }).step);
+        break :blk &run_cmd.step;
+    }));
 
     // Tests
     const exe_unit_tests = b.addRunArtifact(b.addTest(.{
