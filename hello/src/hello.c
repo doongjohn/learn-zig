@@ -1,4 +1,4 @@
-#include "hello_internal.h"
+#include <hello.h>
 #include <stdio.h>
 
 HELLO_API void say_hello(void)

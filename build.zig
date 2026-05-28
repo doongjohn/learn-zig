@@ -22,7 +22,7 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .link_libc = true,
     });
-    hello_mod.addIncludePath(b.path("hello/include"));
+    hello_mod.addIncludePath(b.path("hello/internal"));
     hello_mod.addCSourceFiles(.{
         .files = &.{"hello/src/hello.c"},
         .flags = &.{"-DHELLO_SHARED"},
@@ -33,7 +33,7 @@ pub fn build(b: *std.Build) void {
         .linkage = .dynamic,
     });
     const hello_c = b.addTranslateC(.{
-        .root_source_file = b.path("hello/include/hello.h"),
+        .root_source_file = b.path("hello/include/hello/hello.h"),
         .target = target,
         .optimize = optimize,
     });

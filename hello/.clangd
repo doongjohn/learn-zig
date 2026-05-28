@@ -2,5 +2,5 @@
 CompileFlags:
   Add: [
     -DHELLO_STATIC,
-    -Iinclude
+    -Iinternal
   ]
