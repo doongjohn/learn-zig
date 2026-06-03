@@ -131,14 +131,24 @@ pub fn main(init: std.process.Init) !void {
 
     h1("variable");
     {
+        const imm = 10;
+        // imm = 100; // <-- error: cannot assign to constant
+        console.printf("{d}\n", .{imm});
+
         const n: u8 = 0b0000_0_1_01;
         //            ^^^^^^^^^^^^^ --> "_" can be used anywhere in a
         //                            numeric literal for better readability
         console.printf("{d}\n", .{n});
+    }
 
-        const imm = 10;
-        // imm = 100; // <-- error: cannot assign to constant
-        console.printf("{d}\n", .{imm});
+    h1("optional");
+    {
+        const a: ?i32 = null;
+        // Optionals can be compared directly with raw values.
+        // No 'Some()' wrapper required, unlike Rust.
+        if (a != 10) {
+            console.print("null != 10\n");
+        }
     }
 
     h1("block");
@@ -161,6 +171,7 @@ pub fn main(init: std.process.Init) !void {
         h2("while loop");
         var i: i64 = 0;
 
+        // Basic while loop.
         i = 0;
         while (i < 5) {
             defer i += 1;
@@ -169,6 +180,7 @@ pub fn main(init: std.process.Init) !void {
         console.printf("while end: i = {d}\n", .{i});
         console.println("");
 
+        // While loop with continue expression. (single statement)
         i = 0;
         while (i < 5) : (i += 1) {
             console.printf("{d} ", .{i});
@@ -176,6 +188,7 @@ pub fn main(init: std.process.Init) !void {
         console.printf("while end: i = {d}\n", .{i});
         console.println("");
 
+        // While loop with continue expression. (multiple statements)
         i = 0;
         while (i < 5) : ({
             console.print("(while : ())\n");
@@ -725,7 +738,7 @@ inline fn typeCheckClosure(closure: anytype) void {
     const ClosureCall = @TypeOf(Closure.call);
     switch (@typeInfo(ClosureCall)) {
         .@"fn" => |func_info| {
-            if (func_info.params.len != 1 or func_info.params[0].type != Closure) {
+            if (func_info.param_types.len < 1 or func_info.param_types[0] != Closure) {
                 @compileError(comptimePrint("`closure.call` must be a `fn call(closure: @This)` but found: `{}`", .{ClosureCall}));
             }
         },
@@ -764,11 +777,11 @@ fn UnwrappedTuple(comptime T: type) type {
         @compileError("parameter must be a struct type");
     }
 
-    const fields = info.@"struct".fields;
+    const fields = info.@"struct".field_types;
     var unwrapped: [fields.len]type = undefined;
 
-    inline for (fields, 0..) |field, i| {
-        const field_info = @typeInfo(field.type);
+    inline for (fields, 0..) |Field, i| {
+        const field_info = @typeInfo(Field);
         if (field_info != .optional) {
             @compileError("all fields must be optional types");
         }
