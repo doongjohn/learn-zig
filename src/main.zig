@@ -662,7 +662,7 @@ pub fn main(init: std.process.Init) !void {
     h1("reify type");
     {
         // Type can be created at compile-time.
-        // https://github.com/ziglang/zig/blob/master/lib/std/builtin.zig#L576
+        // https://codeberg.org/ziglang/zig/src/branch/master/lib/std/lang.zig#L582
         const MyInt = @Int(.signed, 32);
 
         const n: MyInt = 20;
