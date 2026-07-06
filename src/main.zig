@@ -659,10 +659,38 @@ pub fn main(init: std.process.Init) !void {
         console.printf("after closure: a = {d}\n", .{a});
     }
 
+    h1("bit cast");
+    {
+        // @bitCast semantics
+        // https://ziglang.org/devlog/2026/#2026-06-25
+        //
+        // Aggregate (array/vector) -> non-aggregate:
+        //   - The aggregate is interpreted in little-endian element order.
+        //
+        // Non-aggregate -> non-aggregate:
+        //   - The bit pattern is preserved exactly.
+        //
+        // Aggregate -> aggregate:
+        //   - The byte layout is preserved exactly.
+
+        const a1 = [3]u8{ 0, 0, 1 };
+        const b1: u24 = @bitCast(a1);
+        console.printf("b1 = {b:0>24}\n", .{b1});
+
+        const a2 = [3]u8{ 1, 0, 0 };
+        const b2: u24 = @bitCast(a2);
+        console.printf("b2 = {b:0>24}\n", .{b2});
+
+        const a3 = [6]u4{ 0, 0, 0, 0, 0, 1 };
+        const b3: u24 = @bitCast(a3);
+        console.printf("b3 = {b:0>24}\n", .{b3});
+    }
+
     h1("reify type");
     {
         // Type can be created at compile-time.
-        // https://codeberg.org/ziglang/zig/src/branch/master/lib/std/lang.zig#L582
+        // https://codeberg.org/ziglang/zig/src/branch/master/lib/std/lang.zig
+        // Search for "pub const Type = union(enum) {".
         const MyInt = @Int(.signed, 32);
 
         const n: MyInt = 20;
