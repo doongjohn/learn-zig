@@ -3,8 +3,8 @@
 ## Learning resources
 
 - [Zig Language Reference](https://ziglang.org/documentation/master/)
-- [zig.guide](https://zig.guide)
 - [Zig Quirks](https://www.openmymind.net/Zig-Quirks/)
+- [Pointer to literal](https://ziggit.dev/t/diving-deep-into-anonymous-struct-literals/2931)
 
 ## Build system
 
