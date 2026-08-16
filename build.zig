@@ -27,28 +27,26 @@ pub fn build(b: *std.Build) void {
         .files = &.{"hello/src/hello.c"},
         .flags = &.{"-DHELLO_SHARED"},
     });
-    const hello = b.addLibrary(.{
+
+    const hello_lib = b.addLibrary(.{
         .name = "hello",
         .root_module = hello_mod,
         .linkage = .dynamic,
     });
+    exe_mod.linkLibrary(hello_lib);
+
     const hello_c = b.addTranslateC(.{
         .root_source_file = b.path("hello/include/hello/hello.h"),
         .target = target,
         .optimize = optimize,
     });
-
-    // Add imports
     exe_mod.addImport("hello", hello_c.createModule());
 
-    // Link libraries
-    exe_mod.linkLibrary(hello);
-
     // Install artifacts
-    b.installArtifact(hello);
     b.installArtifact(exe);
+    b.installArtifact(hello_lib);
 
-    // Run exe
+    // Run step
     const run_step = b.step("run", "Run the app");
     run_step.dependOn((blk: {
         const run_cmd = b.addRunArtifact(exe);
@@ -58,11 +56,10 @@ pub fn build(b: *std.Build) void {
     }));
 
     // Tests
-    const exe_unit_tests = b.addRunArtifact(b.addTest(.{
+    const exe_tests = b.addRunArtifact(b.addTest(.{
         .root_module = exe_mod,
     }));
-
-    const wow_unit_tests = b.addRunArtifact(b.addTest(.{
+    const wow_tests = b.addRunArtifact(b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/wow.zig"),
             .target = target,
@@ -70,7 +67,8 @@ pub fn build(b: *std.Build) void {
         }),
     }));
 
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&exe_unit_tests.step);
-    test_step.dependOn(&wow_unit_tests.step);
+    // Test step
+    const test_step = b.step("test", "Run tests");
+    test_step.dependOn(&exe_tests.step);
+    test_step.dependOn(&wow_tests.step);
 }
