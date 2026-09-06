@@ -648,7 +648,7 @@ pub fn main(init: std.process.Init) !void {
             a: *i32,
 
             // Closure function.
-            fn call(closure: @This()) void {
+            pub fn call(closure: @This()) void {
                 closure.a.* += 100;
             }
         }{

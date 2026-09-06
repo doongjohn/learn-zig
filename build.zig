@@ -48,12 +48,10 @@ pub fn build(b: *std.Build) void {
 
     // Run step
     const run_step = b.step("run", "Run the app");
-    run_step.dependOn((blk: {
-        const run_cmd = b.addRunArtifact(exe);
-        run_cmd.step.dependOn(b.getInstallStep());
-        run_cmd.addPassthruArgs();
-        break :blk &run_cmd.step;
-    }));
+    const run_cmd = b.addRunArtifact(exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    run_cmd.addPassthruArgs();
+    run_step.dependOn(&run_cmd.step);
 
     // Tests
     const exe_tests = b.addRunArtifact(b.addTest(.{
