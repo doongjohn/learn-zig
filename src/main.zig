@@ -8,8 +8,17 @@ const hello = @import("hello");
 const win32 = if (builtin.os.tag == .windows) struct {
     const w = os.windows;
 
-    extern "kernel32" fn SetConsoleOutputCP(wCodePageID: w.UINT) callconv(.winapi) w.BOOL;
-    extern "kernel32" fn ReadConsoleW(handle: w.HANDLE, buffer: [*]u16, len: w.DWORD, read: *w.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) w.BOOL;
+    extern "kernel32" fn SetConsoleOutputCP(
+        wCodePageID: w.UINT,
+    ) callconv(.winapi) w.BOOL;
+
+    extern "kernel32" fn ReadConsoleW(
+        handle: w.HANDLE,
+        buffer: [*]u16,
+        len: w.DWORD,
+        read: *w.DWORD,
+        input_ctrl: ?*anyopaque,
+    ) callconv(.winapi) w.BOOL;
 };
 
 const console = struct {

@@ -4,7 +4,6 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // Target: exe
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
@@ -16,7 +15,6 @@ pub fn build(b: *std.Build) void {
     });
     exe_mod.addRPathSpecial("$ORIGIN/../lib");
 
-    // Target: hello
     const hello_mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
@@ -38,7 +36,7 @@ pub fn build(b: *std.Build) void {
     const hello_c = b.addTranslateC(.{
         .root_source_file = b.path("hello/include/hello/hello.h"),
         .target = target,
-        .optimize = optimize,
+        .optimize = optimize orelse .debug,
     });
     exe_mod.addImport("hello", hello_c.createModule());
 
@@ -57,6 +55,7 @@ pub fn build(b: *std.Build) void {
     const exe_tests = b.addRunArtifact(b.addTest(.{
         .root_module = exe_mod,
     }));
+
     const wow_tests = b.addRunArtifact(b.addTest(.{
         .root_module = b.createModule(.{
             .root_source_file = b.path("src/wow.zig"),
